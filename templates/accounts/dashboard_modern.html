@@ -1,0 +1,431 @@
+{% extends "base_modern.html" %}
+{% block title %}Dashboard - Business Platform{% endblock %}
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">Dashboard</h1>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-modern">
+                <i class="bi bi-download me-2"></i>
+                Export
+            </button>
+            <button class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i>
+                Quick Action
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="stat-number">{{ present_count|default:"0" }}</div>
+                <div class="stat-label">Present Today</div>
+                <div class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i>
+                    <span>12% from yesterday</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon danger">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+                <div class="stat-number">{{ absent_count|default:"0" }}</div>
+                <div class="stat-label">Absent Today</div>
+                <div class="stat-change negative">
+                    <i class="bi bi-arrow-down"></i>
+                    <span>8% from yesterday</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="bi bi-clock"></i>
+                </div>
+                <div class="stat-number">{{ late_count|default:"0" }}</div>
+                <div class="stat-label">Late Arrivals</div>
+                <div class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i>
+                    <span>3% from yesterday</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="bi bi-people"></i>
+                </div>
+                <div class="stat-number">{{ total_employees|default:"0" }}</div>
+                <div class="stat-label">Total Employees</div>
+                <div class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i>
+                    <span>2 new this week</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Overview & Quick Actions -->
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-calendar-check me-2 text-primary"></i>
+                        Today's Attendance Overview
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-modern btn-sm">
+                            <i class="bi bi-filter"></i>
+                        </button>
+                        <button class="btn btn-outline-modern btn-sm">
+                            <i class="bi bi-download"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body-modern">
+                    {% if today_attendance %}
+                        <div class="row">
+                            <div class="col-md-6 col-lg-3 mb-3">
+                                <div class="d-flex align-items-center p-3 rounded bg-light">
+                                    <div class="stat-icon success me-3" style="width: 40px; height: 40px; margin-bottom: 0;">
+                                        <i class="bi bi-door-open" style="font-size: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="h6 mb-0 fw-bold">{{ today_attendance.check_in|time:"H:i" }}</div>
+                                        <small class="text-muted">Check-in</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-3 mb-3">
+                                <div class="d-flex align-items-center p-3 rounded bg-light">
+                                    <div class="stat-icon danger me-3" style="width: 40px; height: 40px; margin-bottom: 0;">
+                                        <i class="bi bi-door-closed" style="font-size: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="h6 mb-0 fw-bold">
+                                            {% if today_attendance.check_out %}
+                                                {{ today_attendance.check_out|time:"H:i" }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">Check-out</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-3 mb-3">
+                                <div class="d-flex align-items-center p-3 rounded bg-light">
+                                    <div class="stat-icon primary me-3" style="width: 40px; height: 40px; margin-bottom: 0;">
+                                        <i class="bi bi-clock-history" style="font-size: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="h6 mb-0 fw-bold">
+                                            {% if today_attendance.total_hours is not None %}
+                                                {{ today_attendance.total_hours|floatformat:2 }}h
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">Total Hours</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-3 mb-3">
+                                <div class="d-flex align-items-center p-3 rounded bg-light">
+                                    <div class="stat-icon {% if today_attendance.is_late %}warning{% else %}success{% endif %} me-3" style="width: 40px; height: 40px; margin-bottom: 0;">
+                                        <i class="bi {% if today_attendance.is_late %}bi-exclamation-triangle{% else %}bi-check-circle{% endif %}" style="font-size: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="h6 mb-0 fw-bold">
+                                            {% if today_attendance.is_late %}
+                                                Late
+                                            {% else %}
+                                                On Time
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">Status</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Daily Progress</span>
+                                <span class="text-muted small">
+                                    {% if today_attendance.total_hours is not None %}
+                                        {{ today_attendance.total_hours|floatformat:1 }}/8.0h
+                                    {% else %}
+                                        0.0/8.0h
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-primary" role="progressbar" 
+                                     id="daily-progress-bar"
+                                     {% if today_attendance.total_hours is not None %}
+                                         data-hours="{{ today_attendance.total_hours }}"
+                                     {% endif %}
+                                     aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const progressBar = document.getElementById('daily-progress-bar');
+                                if (progressBar && progressBar.dataset.hours) {
+                                    const hours = parseFloat(progressBar.dataset.hours);
+                                    const progress = hours / 8 * 100;
+                                    progressBar.style.width = progress + '%';
+                                    progressBar.setAttribute('aria-valuenow', Math.round(progress));
+                                }
+                            });
+                        </script>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-calendar-x"></i>
+                            <h5 class="empty-state-title">No attendance record for today</h5>
+                            <p class="empty-state-text">Check in to start tracking your attendance</p>
+                            <form method="post" action="{% url 'attendance_check_in' %}" class="d-inline-block">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary-modern">
+                                    <i class="bi bi-door-open me-2"></i>
+                                    Check In Now
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-4">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-lightning me-2 text-warning"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="d-grid gap-3">
+                        <form method="post" action="{% url 'attendance_check_in' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success-modern w-100" 
+                                    {% if today_attendance and today_attendance.check_in %}disabled{% endif %}>
+                                <i class="bi bi-door-open me-2"></i>
+                                Check In
+                                {% if today_attendance and today_attendance.check_in %}
+                                    <small class="d-block mt-1 text-muted">Already checked in</small>
+                                {% endif %}
+                            </button>
+                        </form>
+                        
+                        <form method="post" action="{% url 'attendance_check_out' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger-modern w-100"
+                                    {% if not today_attendance or not today_attendance.check_in or today_attendance.check_out %}disabled{% endif %}>
+                                <i class="bi bi-door-closed me-2"></i>
+                                Check Out
+                                {% if not today_attendance or not today_attendance.check_in %}
+                                    <small class="d-block mt-1 text-muted">Check in first</small>
+                                {% elif today_attendance.check_out %}
+                                    <small class="d-block mt-1 text-muted">Already checked out</small>
+                                {% endif %}
+                            </button>
+                        </form>
+                        
+                        <a href="{% url 'leave:leave_request' %}" class="btn btn-outline-modern w-100">
+                            <i class="bi bi-calendar-plus me-2"></i>
+                            Request Leave
+                        </a>
+                        
+                        <hr class="my-3">
+                        
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-outline-modern text-start">
+                                <i class="bi bi-file-text me-2"></i>
+                                View Reports
+                            </a>
+                            <a href="#" class="btn btn-outline-modern text-start">
+                                <i class="bi bi-people me-2"></i>
+                                Team Directory
+                            </a>
+                            <a href="#" class="btn btn-outline-modern text-start">
+                                <i class="bi bi-gear me-2"></i>
+                                Settings
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Additional Stats -->
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-activity me-2 text-info"></i>
+                        Recent Activity
+                    </h5>
+                    <a href="#" class="btn btn-outline-modern btn-sm">View All</a>
+                </div>
+                <div class="card-body-modern">
+                    {% if recent_attendance %}
+                        <div class="table-responsive">
+                            <table class="table table-modern">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Check-in</th>
+                                        <th>Check-out</th>
+                                        <th>Hours</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attendance in recent_attendance %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="me-2">
+                                                        <div class="stat-icon primary" style="width: 32px; height: 32px; margin-bottom: 0;">
+                                                            <i class="bi bi-calendar3" style="font-size: 14px;"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">{{ attendance.date|date:"M d" }}</div>
+                                                        <small class="text-muted">{{ attendance.date|date:"Y" }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if attendance.check_in %}
+                                                    <span class="badge badge-success-modern">{{ attendance.check_in|time:"H:i" }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.check_out %}
+                                                    <span class="badge badge-danger-modern">{{ attendance.check_out|time:"H:i" }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.total_hours is not None %}
+                                                    <span class="fw-medium">{{ attendance.total_hours|floatformat:2 }}h</span>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-{{ attendance.status_color|default:'secondary' }}-modern">
+                                                    {{ attendance.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-outline-modern btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                        <i class="bi bi-three-dots"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Delete</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-activity"></i>
+                            <h5 class="empty-state-title">No recent activity</h5>
+                            <p class="empty-state-text">Your attendance records will appear here</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-4">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-graph-up me-2 text-success"></i>
+                        Weekly Overview
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted">This Week</span>
+                            <span class="fw-bold">32.5h</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: 81%"></div>
+                        </div>
+                        <small class="text-muted">40h weekly target</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-medium mb-3">Daily Breakdown</h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Mon</span>
+                            <span class="small fw-medium">8.2h</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Tue</span>
+                            <span class="small fw-medium">7.8h</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Wed</span>
+                            <span class="small fw-medium">8.5h</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Thu</span>
+                            <span class="small fw-medium">8.0h</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">Fri</span>
+                            <span class="small fw-medium text-primary">Today</span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <a href="#" class="btn btn-outline-modern">
+                            <i class="bi bi-calendar-week me-2"></i>
+                            View Full Schedule
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

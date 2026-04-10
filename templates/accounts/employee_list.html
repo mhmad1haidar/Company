@@ -1,0 +1,337 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}Employees{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>Employees</h1>
+            <p>Manage company employees and their information</p>
+        </div>
+        <div class="page-actions">
+            {% if perms.auth.add_user %}
+            <a href="{% url 'accounts:employee-create' %}" class="btn btn-primary-modern">
+                <i class="bi bi-person-plus me-2"></i>
+                Add New Employee
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card-modern mb-4">
+        <div class="card-body-modern">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Search Employees</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search by name, email, or ID..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Department</label>
+                    <select name="department" class="form-control">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" {% if dept == department_filter %}selected{% endif %}>
+                            {{ dept }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Role</label>
+                    <select name="role" class="form-control">
+                        <option value="">All Roles</option>
+                        {% for role_value, role_label in roles %}
+                        <option value="{{ role_value }}" {% if role_value == role_filter %}selected{% endif %}>
+                            {{ role_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary-modern">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <a href="{% url 'accounts:employee-list' %}" class="btn btn-outline-modern">
+                            <i class="bi bi-x-circle"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employees List -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-people me-2"></i>
+                All Employees ({{ employees.paginator.count }})
+                {% if search_query or department_filter or role_filter %}
+                <small class="text-muted">(Filtered)</small>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            {% if employees %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in employees %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-3">
+                                        {% if employee.get_full_name %}
+                                            {{ employee.get_full_name|slice:":2"|upper }}
+                                        {% else %}
+                                            {{ employee.username|slice:":2"|upper }}
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <strong>{{ employee.get_full_name|default:employee.username }}</strong>
+                                        {% if employee.employee_id %}
+                                        <br><small class="text-muted">ID: {{ employee.employee_id }}</small>
+                                        {% endif %}
+                                        {% if employee.job_title %}
+                                        <br><small class="text-muted">{{ employee.job_title }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="mailto:{{ employee.email }}" class="text-decoration-none">
+                                    {{ employee.email }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if employee.department %}
+                                <span class="badge bg-light text-dark">{{ employee.department }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if employee.is_superuser %}
+                                <span class="badge bg-danger">Super Admin</span>
+                                {% elif employee.is_staff %}
+                                <span class="badge bg-warning">Staff</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ employee.get_role_display|default:"Employee" }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if employee.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if employee.last_login %}
+                                <small>{{ employee.last_login|date:"d/m/Y H:i" }}</small>
+                                {% else %}
+                                <small class="text-muted">Never</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if perms.auth.change_user %}
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'accounts:employee-detail' employee.pk %}" 
+                                       class="btn btn-sm btn-outline-modern" title="View Profile">
+                                        <i class="bi bi-eye me-1"></i>
+                                        View
+                                    </a>
+                                    <a href="{% url 'accounts:employee-profile-edit' employee.pk %}" 
+                                       class="btn btn-sm btn-primary-modern" title="Edit Profile">
+                                        <i class="bi bi-person-gear me-1"></i>
+                                        Edit Profile
+                                    </a>
+                                </div>
+                                {% else %}
+                                <a href="{% url 'accounts:employee-detail' employee.pk %}" 
+                                   class="btn btn-sm btn-outline-modern" title="View Profile">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if employees.has_other_pages %}
+            <nav aria-label="Employee pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if employees.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ employees.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in employees.paginator.page_range %}
+                    {% if employees.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > employees.number|add:'-3' and num < employees.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if employees.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ employees.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ employees.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-people" style="font-size: 4rem; color: #6c757d;"></i>
+                <h5 class="mt-3">
+                    {% if search_query or department_filter or role_filter %}
+                    No Employees Found
+                    {% else %}
+                    No Employees Found
+                    {% endif %}
+                </h5>
+                <p class="text-muted">
+                    {% if search_query or department_filter or role_filter %}
+                    No employees match your search criteria. 
+                    <a href="{% url 'accounts:employee-list' %}">Clear filters</a> to see all employees.
+                    {% else %}
+                    No employees have been added yet.
+                    {% endif %}
+                </p>
+                {% if perms.auth.add_user %}
+                <a href="{% url 'accounts:employee-create' %}" class="btn btn-primary-modern mt-3">
+                    <i class="bi bi-person-plus me-2"></i>
+                    {% if search_query or department_filter or role_filter %}
+                    Add New Employee
+                    {% else %}
+                    Add First Employee
+                    {% endif %}
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.table-modern {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table-modern th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table-modern td {
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-modern tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.pagination .page-link {
+    color: var(--primary);
+    border: 1px solid #dee2e6;
+    margin: 0 2px;
+    border-radius: 4px;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination .page-link:hover {
+    background-color: #f8f9fa;
+    border-color: var(--primary);
+}
+
+.form-control {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.btn-group .btn {
+    border-radius: 4px;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+</style>
+{% endblock %}

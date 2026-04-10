@@ -1,0 +1,116 @@
+{% extends "base_modern.html" %}
+{% block title %}Create Intervention - Platform{% endblock %}
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Create Intervention</h1>
+            <p>Create a new intervention record</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'interventions:intervention_list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Interventions
+            </a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Intervention Details
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <label for="{{ form.code.id_for_label }}" class="form-label-modern">
+                                        <i class="bi bi-hash me-2"></i>
+                                        {{ form.code.label }}
+                                    </label>
+                                    {{ form.code }}
+                                    {% if form.code.errors %}
+                                        <div class="form-error">
+                                            {% for error in form.code.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <label for="{{ form.intervention_type.id_for_label }}" class="form-label-modern">
+                                        <i class="bi bi-tools me-2"></i>
+                                        {{ form.intervention_type.label }}
+                                    </label>
+                                    {{ form.intervention_type }}
+                                    {% if form.intervention_type.errors %}
+                                        <div class="form-error">
+                                            {% for error in form.intervention_type.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <label for="{{ form.assigned_employees.id_for_label }}" class="form-label-modern">
+                                        <i class="bi bi-people me-2"></i>
+                                        {{ form.assigned_employees.label }}
+                                    </label>
+                                    {{ form.assigned_employees }}
+                                    {% if form.assigned_employees.errors %}
+                                        <div class="form-error">
+                                            {% for error in form.assigned_employees.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <label for="{{ form.used_car.id_for_label }}" class="form-label-modern">
+                                        <i class="bi bi-truck me-2"></i>
+                                        {{ form.used_car.label }}
+                                    </label>
+                                    {{ form.used_car }}
+                                    {% if form.used_car.errors %}
+                                        <div class="form-error">
+                                            {% for error in form.used_car.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="form-group-modern">
+                            <button type="submit" class="btn btn-primary-modern">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Create Intervention
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

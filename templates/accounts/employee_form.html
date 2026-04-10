@@ -1,0 +1,308 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}
+{% if action == 'create' %}Create New Employee{% elif action == 'edit' %}Edit Employee{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>
+                {% if action == 'create' %}Create New Employee{% elif action == 'edit' %}Edit Employee{% endif %}
+            </h1>
+            {% if action == 'edit' %}
+            <p>{{ employee.get_full_name|default:employee.username }}</p>
+            {% endif %}
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'accounts:employee-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Employees
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Employee Form -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-person-plus me-2"></i>
+                        {% if action == 'create' %}Create Employee{% elif action == 'edit' %}Edit Employee{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form method="post" id="employeeForm">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-person me-2"></i>Basic Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.username.label }}</label>
+                                            {{ form.username }}
+                                            {% if form.username.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.username.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.email.label }}</label>
+                                            {{ form.email }}
+                                            {% if form.email.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.email.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.first_name.label }}</label>
+                                            {{ form.first_name }}
+                                            {% if form.first_name.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.first_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.last_name.label }}</label>
+                                            {{ form.last_name }}
+                                            {% if form.last_name.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.last_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Work Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-briefcase me-2"></i>Work Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.role.label }}</label>
+                                            {{ form.role }}
+                                            {% if form.role.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.role.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.employee_id.label }}</label>
+                                            {{ form.employee_id }}
+                                            {% if form.employee_id.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.employee_id.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.department.label }}</label>
+                                            {{ form.department }}
+                                            {% if form.department.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.department.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.job_title.label }}</label>
+                                            {{ form.job_title }}
+                                            {% if form.job_title.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.job_title.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Password Fields (Only for Create) -->
+                            {% if action == 'create' %}
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-lock me-2"></i>Password
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Password *</label>
+                                            {{ form.password1 }}
+                                            {% if form.password1.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.password1.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                            <small class="text-muted">Minimum 8 characters</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Confirm Password *</label>
+                                            {{ form.password2 }}
+                                            {% if form.password2.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.password2.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                            <small class="text-muted">Enter password again</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Access Control -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-shield-check me-2"></i>Access Control
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_active }}
+                                                <label class="form-check-label" for="{{ form.is_active.id }}">
+                                                    {{ form.is_active.label }}
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">User can log in</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_staff }}
+                                                <label class="form-check-label" for="{{ form.is_staff.id }}">
+                                                    {{ form.is_staff.label }}
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">Can manage employees</small>
+                                        </div>
+                                    </div>
+                                    {% if action == 'edit' %}
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_superuser }}
+                                                <label class="form-check-label" for="{{ form.is_superuser.id }}">
+                                                    {{ form.is_superuser.label }}
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">Full admin access</small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'accounts:employee-list' %}" class="btn btn-outline-modern">
+                                        <i class="bi bi-x-circle me-2"></i>
+                                        Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary-modern">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        {% if action == 'create' %}Create Employee{% else %}Update Employee{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+</div>
+
+<style>
+.form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.card-modern {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.card-header-modern {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+}
+
+.text-primary {
+    color: var(--primary) !important;
+}
+</style>
+{% endblock %}

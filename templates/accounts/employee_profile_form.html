@@ -1,0 +1,726 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>{{ title }}</h1>
+            <p>Manage employee profile information</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'accounts:employee-detail' employee.pk %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Employee
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Basic Info Form -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-person me-2"></i>
+                        Manage basic information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form method="post" id="basicInfoForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="basic_info" value="1">
+                        
+                        {% if basic_form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in basic_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-person me-2"></i>Basic Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.first_name.label }}</label>
+                                            {{ basic_form.first_name }}
+                                            {% if basic_form.first_name.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.first_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.last_name.label }}</label>
+                                            {{ basic_form.last_name }}
+                                            {% if basic_form.last_name.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.last_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.email.label }}</label>
+                                            {{ basic_form.email }}
+                                            {% if basic_form.email.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.email.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.username.label }}</label>
+                                            {{ basic_form.username }}
+                                            {% if basic_form.username.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.username.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.employee_id.label }}</label>
+                                            {{ basic_form.employee_id }}
+                                            {% if basic_form.employee_id.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.employee_id.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Work Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-briefcase me-2"></i>Work Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.role.label }}</label>
+                                            {{ basic_form.role }}
+                                            {% if basic_form.role.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.role.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.department.label }}</label>
+                                            {{ basic_form.department }}
+                                            {% if basic_form.department.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.department.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ basic_form.job_title.label }}</label>
+                                            {{ basic_form.job_title }}
+                                            {% if basic_form.job_title.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.job_title.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Access Control -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-shield-lock me-2"></i>Access Control
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                {{ basic_form.is_active }}
+                                                <label class="form-check-label" for="id_{{ basic_form.is_active.name }}">
+                                                    {{ basic_form.is_active.label }}
+                                                </label>
+                                            </div>
+                                            {% if basic_form.is_active.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.is_active.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                {{ basic_form.is_staff }}
+                                                <label class="form-check-label" for="id_{{ basic_form.is_staff.name }}">
+                                                    {{ basic_form.is_staff.label }}
+                                                </label>
+                                            </div>
+                                            {% if basic_form.is_staff.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.is_staff.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                {{ basic_form.is_superuser }}
+                                                <label class="form-check-label" for="id_{{ basic_form.is_superuser.name }}">
+                                                    {{ basic_form.is_superuser.label }}
+                                                </label>
+                                            </div>
+                                            {% if basic_form.is_superuser.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in basic_form.is_superuser.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'accounts:employee-detail' employee.pk %}" class="btn btn-outline-modern">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary-modern">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Update Basic Info
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Profile Form -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-person-gear me-2"></i>
+                        Manage employee profile information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form method="post" id="profileForm">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Personal Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-person me-2"></i>Personal Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.date_of_birth.label }}</label>
+                                            {{ form.date_of_birth }}
+                                            {% if form.date_of_birth.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.date_of_birth.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.gender.label }}</label>
+                                            {{ form.gender }}
+                                            {% if form.gender.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.gender.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.blood_group.label }}</label>
+                                            {{ form.blood_group }}
+                                            {% if form.blood_group.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.blood_group.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.marital_status.label }}</label>
+                                            {{ form.marital_status }}
+                                            {% if form.marital_status.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.marital_status.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-telephone me-2"></i>Contact Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.personal_phone.label }}</label>
+                                            {{ form.personal_phone }}
+                                            {% if form.personal_phone.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.personal_phone.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.work_phone.label }}</label>
+                                            {{ form.work_phone }}
+                                            {% if form.work_phone.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.work_phone.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.emergency_contact_name.label }}</label>
+                                            {{ form.emergency_contact_name }}
+                                            {% if form.emergency_contact_name.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.emergency_contact_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.emergency_contact_phone.label }}</label>
+                                            {{ form.emergency_contact_phone }}
+                                            {% if form.emergency_contact_phone.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.emergency_contact_phone.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.emergency_contact_relation.label }}</label>
+                                            {{ form.emergency_contact_relation }}
+                                            {% if form.emergency_contact_relation.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.emergency_contact_relation.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Address Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-geo-alt me-2"></i>Address Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.current_address.label }}</label>
+                                            {{ form.current_address }}
+                                            {% if form.current_address.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.current_address.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.permanent_address.label }}</label>
+                                            {{ form.permanent_address }}
+                                            {% if form.permanent_address.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.permanent_address.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.city.label }}</label>
+                                            {{ form.city }}
+                                            {% if form.city.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.city.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.state.label }}</label>
+                                            {{ form.state }}
+                                            {% if form.state.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.state.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.country.label }}</label>
+                                            {{ form.country }}
+                                            {% if form.country.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.country.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.postal_code.label }}</label>
+                                            {{ form.postal_code }}
+                                            {% if form.postal_code.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.postal_code.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Professional Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-briefcase me-2"></i>Professional Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.hire_date.label }}</label>
+                                            {{ form.hire_date }}
+                                            {% if form.hire_date.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.hire_date.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.employment_type.label }}</label>
+                                            {{ form.employment_type }}
+                                            {% if form.employment_type.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.employment_type.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.work_location.label }}</label>
+                                            {{ form.work_location }}
+                                            {% if form.work_location.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.work_location.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.reporting_manager.label }}</label>
+                                            {{ form.reporting_manager }}
+                                            {% if form.reporting_manager.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.reporting_manager.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Financial Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-bank me-2"></i>Financial Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.bank_name.label }}</label>
+                                            {{ form.bank_name }}
+                                            {% if form.bank_name.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.bank_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.bank_account_number.label }}</label>
+                                            {{ form.bank_account_number }}
+                                            {% if form.bank_account_number.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.bank_account_number.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.bank_ifsc_code.label }}</label>
+                                            {{ form.bank_ifsc_code }}
+                                            {% if form.bank_ifsc_code.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.bank_ifsc_code.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.salary.label }}</label>
+                                            {{ form.salary }}
+                                            {% if form.salary.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.salary.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional Information -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-info-circle me-2"></i>Additional Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.nationality.label }}</label>
+                                            {{ form.nationality }}
+                                            {% if form.nationality.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.nationality.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.passport_number.label }}</label>
+                                            {{ form.passport_number }}
+                                            {% if form.passport_number.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.passport_number.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.visa_status.label }}</label>
+                                            {{ form.visa_status }}
+                                            {% if form.visa_status.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.visa_status.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'accounts:employee-detail' employee.pk %}" class="btn btn-outline-modern">
+                                        <i class="bi bi-x-circle me-2"></i>
+                                        Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary-modern">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        Update Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.card-modern {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.card-header-modern {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+}
+
+.text-primary {
+    color: var(--primary) !important;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.btn-primary-modern {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-primary-modern:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+</style>
+{% endblock %}

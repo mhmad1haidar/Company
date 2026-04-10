@@ -1,0 +1,174 @@
+{% extends "base_modern.html" %}
+{% block title %}{{ intervention.code }} - Intervention Details{% endblock %}
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>{{ intervention.code }}</h1>
+            <p>Intervention details and management</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'interventions:intervention_list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Interventions
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'interventions:intervention_edit' intervention.id %}" class="btn btn-primary-modern">
+                <i class="bi bi-pencil me-2"></i>
+                Edit Intervention
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Intervention Details -->
+        <div class="col-lg-8">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-tools me-2"></i>
+                        Intervention Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Intervention Code</label>
+                                <div class="info-value-modern">{{ intervention.code }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Type</label>
+                                <div class="info-value-modern">
+                                    <span class="badge badge-modern badge-info-modern">
+                                        {{ intervention.intervention_type|title }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Status</label>
+                                <div class="info-value-modern">
+                                    {% if intervention.status == 'not_confirmed' %}
+                                        <span class="badge badge-modern badge-warning-modern">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ intervention.status|title }}
+                                        </span>
+                                    {% elif intervention.status == 'in_progress' %}
+                                        <span class="badge badge-modern badge-primary-modern">
+                                            <i class="bi bi-arrow-repeat me-1"></i>{{ intervention.status|title }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-modern badge-success-modern">
+                                            <i class="bi bi-check-circle me-1"></i>{{ intervention.status|title }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Created Date</label>
+                                <div class="info-value-modern">{{ intervention.created_at|date:"M d, Y H:i" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Last Updated</label>
+                                <div class="info-value-modern">{{ intervention.updated_at|date:"M d, Y H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Information -->
+        <div class="col-lg-4">
+            <!-- Assigned Employees -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-people me-2"></i>
+                        Assigned Employees
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% for employee in intervention.assigned_employees.all %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-person-circle me-2 text-primary"></i>
+                            <div>
+                                <div class="fw-medium">{{ employee.get_full_name|default:employee.username }}</div>
+                                <div class="text-muted small">{{ employee.email }}</div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">No employees assigned</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Vehicle Used -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-truck me-2"></i>
+                        Vehicle Used
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if intervention.used_car %}
+                        <div class="info-group-modern">
+                            <label class="info-label-modern">Vehicle</label>
+                            <div class="info-value-modern">
+                                <div class="fw-medium">{{ intervention.used_car.plate_number }}</div>
+                                <div class="text-muted small">{{ intervention.used_car.brand }} {{ intervention.used_car.model }}</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No vehicle assigned</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            {% if can_edit or can_delete %}
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-lightning me-2"></i>
+                        Actions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="d-grid gap-2">
+                        {% if can_edit %}
+                        <a href="{% url 'interventions:intervention_edit' intervention.id %}" class="btn btn-outline-modern text-start">
+                            <i class="bi bi-pencil me-2"></i>
+                            <div>
+                                <div class="fw-medium">Edit Intervention</div>
+                                <div class="text-muted small">Update details</div>
+                            </div>
+                        </a>
+                        {% endif %}
+                        
+                        {% if can_delete %}
+                        <a href="{% url 'interventions:intervention_delete' intervention.id %}" class="btn btn-outline-modern text-start">
+                            <i class="bi bi-trash me-2"></i>
+                            <div>
+                                <div class="fw-medium">Delete Intervention</div>
+                                <div class="text-muted small">Remove permanently</div>
+                            </div>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

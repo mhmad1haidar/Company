@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>AJAX Leave Approval Test</h1>
+    
+    <div id="test-result">
+        <p>Testing AJAX functionality...</p>
+    </div>
+    
+    <script>
+        function testAjax() {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.innerHTML = '<p>Testing AJAX request...</p>';
+            
+            // Get CSRF token (simulate)
+            const csrfToken = 'test-token';
+            
+            // Test AJAX request
+            fetch('/leave/admin/6/approve/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: 'status=approved'
+            })
+            .then(response => {
+                resultDiv.innerHTML = `<p>Response status: ${response.status}</p>`;
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            })
+            .then(data => {
+                resultDiv.innerHTML = `
+                    <p>AJAX Success!</p>
+                    <p>Status: ${data.status_display}</p>
+                    <p>Color: ${data.status_color}</p>
+                    <p>Approved by: ${data.approved_by}</p>
+                `;
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>

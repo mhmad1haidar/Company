@@ -1,0 +1,150 @@
+{% extends "base_modern.html" %}
+{% block title %}Sign In - Business Platform{% endblock %}
+{% block login_content %}
+<div class="login-card fade-in">
+    <!-- Login Logo -->
+    <div class="login-logo">
+        <i class="bi bi-grid-3x3-gap"></i>
+        <h3 class="login-title">Business Platform</h3>
+        <p class="login-subtitle">Sign in to access your workspace</p>
+    </div>
+    
+    <!-- Form errors -->
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger-modern alert-modern" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            {% for err in form.non_field_errors %}
+                {{ err }}
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <form method="post" action="{% url 'accounts:login' %}" novalidate>
+        {% csrf_token %}
+        
+        <!-- Hidden next field for redirect -->
+        {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% endif %}
+        
+        <!-- Username field -->
+        <div class="mb-4">
+            <label for="id_username" class="form-label-modern">
+                <i class="bi bi-person me-2"></i>Email or Username
+            </label>
+            <input type="text" name="username" class="form-control-modern" id="id_username" required>
+            {% for err in form.username.errors %}
+                <div class="text-danger small mt-1">{{ err }}</div>
+            {% endfor %}
+        </div>
+        
+        <!-- Password field -->
+        <div class="mb-4">
+            <label for="id_password" class="form-label-modern">
+                <i class="bi bi-lock me-2"></i>Password
+            </label>
+            <input type="password" name="password" class="form-control-modern" id="id_password" required>
+            {% for err in form.password.errors %}
+                <div class="text-danger small mt-1">{{ err }}</div>
+            {% endfor %}
+        </div>
+        
+        <!-- Remember me & Forgot password -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                <label class="form-check-label text-muted small" for="remember">
+                    Remember me
+                </label>
+            </div>
+            <a href="#" class="text-primary text-decoration-none small">
+                Forgot password?
+            </a>
+        </div>
+        
+        <!-- Submit button -->
+        <div class="d-grid mb-4">
+            <button type="submit" class="btn btn-primary-modern btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+            </button>
+        </div>
+        
+        <!-- Divider -->
+        <div class="text-center mb-4">
+            <span class="text-muted small">Or continue with</span>
+        </div>
+        
+        <!-- Social login buttons -->
+        <div class="d-grid gap-2 mb-4">
+            <button type="button" class="btn btn-outline-modern">
+                <i class="bi bi-google me-2"></i>
+                Google
+            </button>
+            <button type="button" class="btn btn-outline-modern">
+                <i class="bi bi-microsoft me-2"></i>
+                Microsoft
+            </button>
+        </div>
+    </form>
+    
+    <!-- Sign up link -->
+    <div class="text-center">
+        <small class="text-muted">
+            Don't have an account? 
+            <a href="#" class="text-primary text-decoration-none">Sign up</a>
+        </small>
+    </div>
+    
+    <!-- Security notice -->
+    <div class="text-center mt-4">
+        <small class="text-muted">
+            <i class="bi bi-shield-check me-1"></i>
+            Secure connection • Your data is protected
+        </small>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add focus effects to form fields
+    const formControls = document.querySelectorAll('.form-control-modern');
+    formControls.forEach(control => {
+        control.addEventListener('focus', function() {
+            this.parentElement.classList.add('form-group-focused');
+        });
+        
+        control.addEventListener('blur', function() {
+            if (!this.value) {
+                this.parentElement.classList.remove('form-group-focused');
+            }
+        });
+        
+        // Check initial state
+        if (control.value) {
+            control.parentElement.classList.add('form-group-focused');
+        }
+    });
+});
+</script>
+
+<style>
+.form-group-focused .form-label-modern {
+    color: var(--primary);
+}
+
+.form-control-modern:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.form-check-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+}
+</style>
+{% endblock %}

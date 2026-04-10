@@ -1,0 +1,16 @@
+# Core
+Django>=6.0,<7
+
+# Configuration
+django-environ>=0.11,<1
+
+# API (REST)
+djangorestframework>=3.15,<4
+
+# CORS for future SPA / mobile clients
+django-cors-headers>=4.3,<5
+
+# Excel generation
+openpyxl>=3.1.0
+
+gunicorn==23.0.0

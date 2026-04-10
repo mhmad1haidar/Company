@@ -1,0 +1,439 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}{{ intervention.codice_nigit|default:intervention.pk }} - Intervention Details{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>{{ intervention.codice_nigit|default:"Intervention " }}{{ intervention.pk }}</h1>
+            <p>{{ intervention.nome|default:"No name" }} - {{ intervention.cliente|default:"No client" }}</p>
+        </div>
+        <div class="page-actions">
+            {% if perms.interventions.change_intervention %}
+            <a href="{% url 'interventions:intervention-update' intervention.pk %}" class="btn btn-primary-modern">
+                <i class="bi bi-pencil me-2"></i>
+                Edit Intervention
+            </a>
+            {% endif %}
+            <a href="{% url 'assignments:create-from-intervention' intervention.pk %}" class="btn btn-success-modern">
+                <i class="bi bi-person-plus me-2"></i>
+                Assign Work
+            </a>
+            {% if perms.interventions.delete_intervention %}
+            <a href="{% url 'interventions:intervention-delete' intervention.pk %}" class="btn btn-outline-modern text-danger">
+                <i class="bi bi-trash me-2"></i>
+                Delete
+            </a>
+            {% endif %}
+            <a href="{% url 'interventions:intervention-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Badge -->
+    {% if intervention.stato_avanzamento_nigit %}
+    <div class="alert alert-info d-flex align-items-center mb-4">
+        <div class="me-3">
+            {% with status_colors="DA_INIZIARE:warning,IN_CORSO:info,COMPLETATO:success,SOSPESO:secondary,ANNULLATO:danger" %}
+                {% for status_color in status_colors.split %}
+                    {% with status_pair=status_color.split %}
+                        {% if intervention.stato_avanzamento_nigit == status_pair.0 %}
+                            <span class="badge bg-{{ status_pair.1 }} fs-6">
+                                {{ intervention.get_stato_avanzamento_nigit_display }}
+                            </span>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            {% endwith %}
+        </div>
+        <div class="flex-grow-1">
+            <strong>Current Status:</strong> {{ intervention.get_stato_avanzamento_nigit_display }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Basic Information -->
+        <div class="col-md-6">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Basic Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Codice NIGIT:</td>
+                            <td><strong>{{ intervention.codice_nigit|default:"-" }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">ODA:</td>
+                            <td>{{ intervention.oda|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Anno:</td>
+                            <td>{{ intervention.anno_intervento|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Cliente:</td>
+                            <td><strong>{{ intervention.cliente|default:"-" }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Intervento:</td>
+                            <td><strong>{{ intervention.nome|default:"-" }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Nome Assistente:</td>
+                            <td>{{ intervention.assistente|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Tipologia Intervento:</td>
+                            <td>{{ intervention.tipologia_intervento|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Ticket:</td>
+                            <td>{{ intervention.ticket|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">International Code:</td>
+                            <td>{{ intervention.international_code|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Codice Sito:</td>
+                            <td>{{ intervention.codice_sito|default:"-" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Information -->
+        <div class="col-md-6">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-flag me-2"></i>
+                        Status Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Stato Avanzamento NIGIT:</td>
+                            <td>
+                                {% if intervention.stato_avanzamento_nigit %}
+                                    {% with status_colors="DA_INIZIARE:warning,IN_CORSO:info,COMPLETATO:success,SOSPESO:secondary,ANNULLATO:danger" %}
+                                        {% for status_color in status_colors.split %}
+                                            {% with status_pair=status_color.split %}
+                                                {% if intervention.stato_avanzamento_nigit == status_pair.0 %}
+                                                    <span class="badge bg-{{ status_pair.1 }}">
+                                                        {{ intervention.get_stato_avanzamento_nigit_display }}
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endfor %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Non impostato</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Stato Avanzamento Contabile NIGIT:</td>
+                            <td>
+                                {% if intervention.stato_avanzamento_contabile_nigit %}
+                                    <span class="badge bg-info">
+                                        {{ intervention.get_stato_avanzamento_contabile_nigit_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non impostato</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Stato Contabile Sirti:</td>
+                            <td>
+                                {% if intervention.stato_contabile_sirti %}
+                                    <span class="badge bg-info">
+                                        {{ intervention.get_stato_contabile_sirti_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non impostato</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Stato Contabile da NIGIT a Cliente:</td>
+                            <td>
+                                {% if intervention.stato_contabile_da_nigit_a_cliente %}
+                                    <span class="badge bg-info">
+                                        {{ intervention.get_stato_contabile_da_nigit_a_cliente_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non impostato</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Important Dates -->
+        <div class="col-md-6">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-calendar-event me-2"></i>
+                        Important Dates
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Data Richiesta:</td>
+                            <td>{{ intervention.data_richiesta|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Data Assegnazione Squadra:</td>
+                            <td>{{ intervention.data_assegnazione_squadra|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Data Chiusura Lavori:</td>
+                            <td>{{ intervention.data_chiusura_lavori|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Data Invio Preventivo:</td>
+                            <td>{{ intervention.data_invio_preventivo|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Data Approvazione Preventivo:</td>
+                            <td>{{ intervention.data_approvazione_preventivo|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Created At:</td>
+                            <td>{{ intervention.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Updated At:</td>
+                            <td>{{ intervention.updated_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Information -->
+        <div class="col-md-6">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-currency-euro me-2"></i>
+                        Financial Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Tot Richiesto:</td>
+                            <td><strong>€{{ intervention.tot_richiesto|floatformat:2|default:"0.00" }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Importo Autorizzato Sirti:</td>
+                            <td><strong>€{{ intervention.importo_autorizzato_sirti|floatformat:2|default:"0.00" }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Differenza Dare/Avere:</td>
+                            <td>
+                                {% if intervention.differenza_dare_avere %}
+                                    <strong class="{% if intervention.differenza_dare_avere > 0 %}text-success{% elif intervention.differenza_dare_avere < 0 %}text-danger{% endif %}">
+                                        €{{ intervention.differenza_dare_avere|floatformat:2 }}
+                                    </strong>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">SES Sirti:</td>
+                            <td><strong>€{{ intervention.ses_sirti|floatformat:2|default:"0.00" }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Notes -->
+        <div class="col-md-6">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-file-text me-2"></i>
+                        Notes
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if intervention.note %}
+                        <p class="mb-0">{{ intervention.note|linebreaks }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0">No notes available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignments -->
+        <div class="col-md-6">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-people me-2"></i>
+                        Assignments
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Created By:</td>
+                            <td>
+                                {% if intervention.created_by %}
+                                    {{ intervention.created_by.get_full_name|default:intervention.created_by.username }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Assigned Employees:</td>
+                            <td>
+                                {% if intervention.assigned_employees.all %}
+                                    {% for employee in intervention.assigned_employees.all %}
+                                        <span class="badge bg-primary me-1">
+                                            {{ employee.get_full_name|default:employee.username }}
+                                        </span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Used Car:</td>
+                            <td>
+                                {% if intervention.used_car %}
+                                    {{ intervention.used_car.plate_number }} - {{ intervention.used_car.model }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Work Assignments Status Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-list-check me-2"></i>
+                        Work Assignments Status
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if intervention.work_assignments.all %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Codice NIGIT</th>
+                                        <th>Assigned To</th>
+                                        <th>Vehicle</th>
+                                        <th>Status</th>
+                                        <th>Assigned Date</th>
+                                        <th>Completed Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for assignment in intervention.work_assignments.all %}
+                                    <tr>
+                                        <td><strong>{{ assignment.codice_nigit }}</strong></td>
+                                        <td>
+                                            {% for user in assignment.assigned_to.all %}
+                                                <span class="badge bg-info me-1">{{ user.get_full_name|default:user.username }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% if assignment.vehicle %}
+                                                {{ assignment.vehicle.plate_number }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if assignment.status == 'pending' %}bg-warning{% elif assignment.status == 'assigned' %}bg-info{% elif assignment.status == 'in_progress' %}bg-primary{% elif assignment.status == 'completed' %}bg-success{% elif assignment.status == 'not_worked' %}bg-danger{% elif assignment.status == 'cancelled' %}bg-secondary{% endif %}">
+                                                {{ assignment.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ assignment.assigned_date|date:"d/m/Y H:i" }}</td>
+                                        <td>
+                                            {% if assignment.completed_date %}
+                                                {{ assignment.completed_date|date:"d/m/Y H:i" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No work assignments created for this intervention yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-gear me-2"></i>
+                System Information
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="row">
+                <div class="col-md-4">
+                    <small class="text-muted">Intervention ID:</small><br>
+                    <strong>{{ intervention.pk }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">Created:</small><br>
+                    <strong>{{ intervention.created_at|date:"d/m/Y H:i:s" }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">Last Updated:</small><br>
+                    <strong>{{ intervention.updated_at|date:"d/m/Y H:i:s" }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,408 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}Work Assignments{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>Work Assignments</h1>
+            <p>Manage work assignments to employees</p>
+        </div>
+        <div class="page-actions">
+            {% if perms.assignments.add_assignment %}
+            <a href="{% url 'assignments:assignment-create' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i>
+                Create Assignment
+            </a>
+            {% endif %}
+            <a href="{% url 'assignments:my-assignments' %}" class="btn btn-outline-modern">
+                <i class="bi bi-person-workspace me-2"></i>
+                My Assignments
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern">{{ stats.total }}</h5>
+                    <p class="card-text-modern">Total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern text-warning">{{ stats.pending }}</h5>
+                    <p class="card-text-modern">Pending</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern text-info">{{ stats.assigned }}</h5>
+                    <p class="card-text-modern">Assigned</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern text-primary">{{ stats.in_progress }}</h5>
+                    <p class="card-text-modern">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern text-success">{{ stats.completed }}</h5>
+                    <p class="card-text-modern">Completed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Search and Filter -->
+    <div class="card-modern mb-4">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-search me-2"></i>
+                Search & Filter
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" name="search" id="search" 
+                           value="{{ search_query }}" placeholder="Search by code, client, employee...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-control" name="status" id="status">
+                        <option value="">All Status</option>
+                        {% for status_value, status_label in status_choices %}
+                        <option value="{{ status_value }}" {% if current_status == status_value %}selected{% endif %}>
+                            {{ status_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary-modern">
+                            <i class="bi bi-search me-2"></i>
+                            Search
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <a href="{% url 'assignments:assignment-list' %}" class="btn btn-outline-modern">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assignments List -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-list-ul me-2"></i>
+                Interventions & Work Status
+            </h5>
+        </div>
+        <div class="card-body-modern" style="overflow: visible;">
+            {% if intervention_summaries %}
+            <div class="table-responsive" style="overflow: visible;">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>Codice NIGIT</th>
+                            <th>Intervention Details</th>
+                            <th>Workers Assigned</th>
+                            <th style="width: 200px;">Work Status</th>
+                            <th>Latest Assignment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for summary in intervention_summaries %}
+                        <tr>
+                            <td>
+                                <strong>{{ summary.intervention.codice_nigit }}</strong>
+                                {% if summary.intervention.international_code or summary.intervention.codice_sito %}
+                                <br>
+                                <small class="text-info">
+                                    {{ summary.intervention.international_code|default:"" }} 
+                                    {% if summary.intervention.codice_sito %} | {{ summary.intervention.codice_sito }}{% endif %}
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ summary.intervention.nome|default:"No name" }}</strong>
+                                <br>
+                                <small class="text-muted">{{ summary.intervention.cliente|default:"No client" }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ summary.total_workers }}</strong> worker{{ summary.total_workers|pluralize }}
+                                <br>
+                                <small class="text-muted">
+                                    {% for worker in summary.workers %}
+                                        {{ worker.get_full_name|default:worker.username }}{% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                        No workers
+                                    {% endfor %}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% if summary.completed_worked > 0 %}
+                                        <span class="badge bg-success">
+                                            {{ summary.completed_worked }} Completed (Worked)
+                                        </span>
+                                    {% endif %}
+                                    {% if summary.completed_not_worked > 0 %}
+                                        <span class="badge bg-secondary">
+                                            {{ summary.completed_not_worked }} Completed (Not Worked)
+                                        </span>
+                                    {% endif %}
+                                    {% if summary.in_progress > 0 %}
+                                        <span class="badge bg-primary">
+                                            {{ summary.in_progress }} In Progress
+                                        </span>
+                                    {% endif %}
+                                    {% if summary.assigned > 0 %}
+                                        <span class="badge bg-info">
+                                            {{ summary.assigned }} Assigned
+                                        </span>
+                                    {% endif %}
+                                    {% if summary.pending > 0 %}
+                                        <span class="badge bg-warning">
+                                            {{ summary.pending }} Pending
+                                        </span>
+                                    {% endif %}
+                                    {% if summary.cancelled > 0 %}
+                                        <span class="badge bg-danger">
+                                            {{ summary.cancelled }} Cancelled
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ summary.total_assignments }} total assignment{{ summary.total_assignments|pluralize }}</small>
+                            </td>
+                            <td>
+                                {{ summary.latest_assignment.created_at|date:"d/m/Y H:i" }}
+                                <br>
+                                <small class="text-muted">{{ summary.latest_assignment.get_status_display }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-modern" 
+                                            title="Hide All Assignments"
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target="#assignments-{{ summary.intervention.pk }}">
+                                        <i class="bi bi-chevron-up"></i>
+                                    </button>
+                                    {% if perms.assignments.add_assignment %}
+                                    <a href="{% url 'assignments:assignment-create' %}?intervention={{ summary.intervention.pk }}" 
+                                       class="btn btn-sm btn-outline-modern" title="Add Assignment">
+                                        <i class="bi bi-plus"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Collapsible row with all assignments for this intervention -->
+                        <tr>
+                            <td colspan="6" class="p-0" style="overflow: visible;">
+                                <div class="collapse show" id="assignments-{{ summary.intervention.pk }}" style="overflow: visible;">
+                                    <div class="p-3 bg-light">
+                                        <h6 class="mb-3">All Assignments for {{ summary.intervention.codice_nigit }}</h6>
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Worker</th>
+                                                    <th>Status</th>
+                                                    <th>Vehicle</th>
+                                                    <th>Scheduled</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for assignment in summary.assignments %}
+                                                <tr>
+                                                    <td>
+                                                        {% for user in assignment.assigned_to.all %}
+                                                            {{ user.get_full_name|default:user.username }}{% if not forloop.last %}, {% endif %}
+                                                        {% endfor %}
+                                                        {% if assignment.status_history.all %}
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-clock-history"></i>
+                                                            Last: {{ assignment.status_history.first.new_status }} ({{ assignment.status_history.first.changed_at|date:"d/m/Y H:i" }})
+                                                        </small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td style="overflow: visible;">
+                                                        <select class="form-select form-select-sm" onchange="changeAssignmentStatus('{{ assignment.pk }}', this.value)" style="width: 130px;">
+                                                            <option value="" disabled>Change Status</option>
+                                                            <option value="pending" {% if assignment.status == 'pending' %}selected{% endif %}>Pending</option>
+                                                            <option value="assigned" {% if assignment.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                                                            <option value="in_progress" {% if assignment.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                                            <option value="completed" {% if assignment.status == 'completed' %}selected{% endif %}>Completed</option>
+                                                            <option value="not_worked" {% if assignment.status == 'not_worked' %}selected{% endif %}>Not Completed</option>
+                                                            <option value="cancelled" {% if assignment.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        {% if assignment.vehicle %}
+                                                            {{ assignment.vehicle.license_plate }}
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if assignment.scheduled_date %}
+                                                            {{ assignment.scheduled_date|date:"d/m/Y H:i" }}
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <a href="{% url 'assignments:assignment-detail' assignment.pk %}" 
+                                                               class="btn btn-sm btn-outline-modern" title="View">
+                                                                <i class="bi bi-eye"></i>
+                                                            </a>
+                                                            {% if perms.assignments.change_assignment %}
+                                                            <a href="{% url 'assignments:assignment-update' assignment.pk %}" 
+                                                               class="btn btn-sm btn-outline-modern" title="Edit">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </a>
+                                                            {% endif %}
+                                                            <a href="{% url 'assignments:delete-assignment' assignment.pk %}" 
+                                                               class="btn btn-sm btn-outline-modern text-danger" 
+                                                               title="Delete">
+                                                                <i class="bi bi-trash"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Assignments pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-clipboard-x" style="font-size: 4rem; color: #6c757d;"></i>
+                <h5 class="mt-3">No interventions found</h5>
+                <p class="text-muted">
+                    {% if search_query or current_status %}
+                        No interventions match your search criteria.
+                    {% else %}
+                        No work assignments have been created yet.
+                    {% endif %}
+                </p>
+                {% if perms.assignments.add_assignment %}
+                <a href="{% url 'assignments:assignment-create' %}" class="btn btn-primary-modern mt-3">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Create First Assignment
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function changeAssignmentStatus(assignmentId, newStatus) {
+    if (!confirm(`Are you sure you want to change the status to ${newStatus}?`)) {
+        return false;
+    }
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/assignments/assignment/${assignmentId}/update-status/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Status updated successfully!');
+            location.reload();
+        } else {
+            alert('Error updating status: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error updating status: ' + error);
+    });
+}
+</script>
+{% endblock %}

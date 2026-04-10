@@ -1,0 +1,457 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}{% if action == 'create' %}New{% else %}Edit{% endif %} Intervention - Platform{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>{% if action == 'create' %}New{% else %}Edit{% endif %} Intervention</h1>
+            <p>{% if action == 'create' %}Create a new intervention{% else %}Edit existing intervention{% endif %}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'interventions:intervention-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Intervention Form -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-clipboard-plus me-2"></i>
+                Intervention Details
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <form method="post" id="interventionForm">
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Basic Information
+                        </h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.codice_nigit.id_for_label }}" class="form-label">
+                            {{ form.codice_nigit.label }}
+                            {% if action == 'create' %}
+                                <span class="badge bg-success ms-2">Auto-generato</span>
+                            {% endif %}
+                        </label>
+                        {{ form.codice_nigit }}
+                        {% if action == 'create' and next_codice_nigit %}
+                        <small class="form-text text-success">
+                            <i class="fas fa-info-circle"></i> Prossimo codice: <strong>{{ next_codice_nigit }}</strong>
+                        </small>
+                        {% endif %}
+                        {% if form.codice_nigit.help_text %}
+                        <small class="form-text text-muted">{{ form.codice_nigit.help_text }}</small>
+                        {% endif %}
+                        {% if form.codice_nigit.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.codice_nigit.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.oda.id_for_label }}" class="form-label">
+                            {{ form.oda.label }}
+                        </label>
+                        {{ form.oda }}
+                        {% if form.oda.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.oda.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.anno_intervento.id_for_label }}" class="form-label">
+                            {{ form.anno_intervento.label }}
+                        </label>
+                        {{ form.anno_intervento }}
+                        {% if form.anno_intervento.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.anno_intervento.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.cliente.id_for_label }}" class="form-label">
+                            {{ form.cliente.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.cliente }}
+                        {% if form.cliente.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.cliente.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.nome.id_for_label }}" class="form-label">
+                            {{ form.nome.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.nome }}
+                        {% if form.nome.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.nome.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.assistente.id_for_label }}" class="form-label">
+                            {{ form.assistente.label }}
+                        </label>
+                        {{ form.assistente }}
+                        {% if form.assistente.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.assistente.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Intervention Details -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-gear me-2"></i>
+                            Intervention Details
+                        </h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.data_richiesta.id_for_label }}" class="form-label">
+                            {{ form.data_richiesta.label }}
+                        </label>
+                        {{ form.data_richiesta }}
+                        {% if form.data_richiesta.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.data_richiesta.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.tipologia_intervento.id_for_label }}" class="form-label">
+                            {{ form.tipologia_intervento.label }}
+                        </label>
+                        {{ form.tipologia_intervento }}
+                        {% if form.tipologia_intervento.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.tipologia_intervento.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.ticket.id_for_label }}" class="form-label">
+                            {{ form.ticket.label }}
+                        </label>
+                        {{ form.ticket }}
+                        {% if form.ticket.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.ticket.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.international_code.id_for_label }}" class="form-label">
+                            {{ form.international_code.label }}
+                        </label>
+                        {{ form.international_code }}
+                        {% if form.international_code.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.international_code.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.codice_sito.id_for_label }}" class="form-label">
+                            {{ form.codice_sito.label }}
+                        </label>
+                        {{ form.codice_sito }}
+                        {% if form.codice_sito.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.codice_sito.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.data_assegnazione_squadra.id_for_label }}" class="form-label">
+                            {{ form.data_assegnazione_squadra.label }}
+                        </label>
+                        {{ form.data_assegnazione_squadra }}
+                        {% if form.data_assegnazione_squadra.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.data_assegnazione_squadra.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Status Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-flag me-2"></i>
+                            Status Information
+                        </h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.stato_avanzamento_nigit.id_for_label }}" class="form-label">
+                            {{ form.stato_avanzamento_nigit.label }}
+                        </label>
+                        {{ form.stato_avanzamento_nigit }}
+                        {% if form.stato_avanzamento_nigit.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.stato_avanzamento_nigit.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.stato_avanzamento_contabile_nigit.id_for_label }}" class="form-label">
+                            {{ form.stato_avanzamento_contabile_nigit.label }}
+                        </label>
+                        {{ form.stato_avanzamento_contabile_nigit }}
+                        {% if form.stato_avanzamento_contabile_nigit.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.stato_avanzamento_contabile_nigit.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.stato_contabile_sirti.id_for_label }}" class="form-label">
+                            {{ form.stato_contabile_sirti.label }}
+                        </label>
+                        {{ form.stato_contabile_sirti }}
+                        {% if form.stato_contabile_sirti.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.stato_contabile_sirti.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.stato_contabile_da_nigit_a_cliente.id_for_label }}" class="form-label">
+                            {{ form.stato_contabile_da_nigit_a_cliente.label }}
+                        </label>
+                        {{ form.stato_contabile_da_nigit_a_cliente }}
+                        {% if form.stato_contabile_da_nigit_a_cliente.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.stato_contabile_da_nigit_a_cliente.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Important Dates -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-calendar-event me-2"></i>
+                            Important Dates
+                        </h6>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.data_chiusura_lavori.id_for_label }}" class="form-label">
+                            {{ form.data_chiusura_lavori.label }}
+                        </label>
+                        {{ form.data_chiusura_lavori }}
+                        {% if form.data_chiusura_lavori.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.data_chiusura_lavori.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.data_invio_preventivo.id_for_label }}" class="form-label">
+                            {{ form.data_invio_preventivo.label }}
+                        </label>
+                        {{ form.data_invio_preventivo }}
+                        {% if form.data_invio_preventivo.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.data_invio_preventivo.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.data_approvazione_preventivo.id_for_label }}" class="form-label">
+                            {{ form.data_approvazione_preventivo.label }}
+                        </label>
+                        {{ form.data_approvazione_preventivo }}
+                        {% if form.data_approvazione_preventivo.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.data_approvazione_preventivo.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Financial Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-currency-euro me-2"></i>
+                            Financial Information
+                        </h6>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.tot_richiesto.id_for_label }}" class="form-label">
+                            {{ form.tot_richiesto.label }}
+                        </label>
+                        {{ form.tot_richiesto }}
+                        {% if form.tot_richiesto.help_text %}
+                        <small class="form-text text-muted">{{ form.tot_richiesto.help_text }}</small>
+                        {% endif %}
+                        {% if form.tot_richiesto.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.tot_richiesto.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.importo_autorizzato_sirti.id_for_label }}" class="form-label">
+                            {{ form.importo_autorizzato_sirti.label }}
+                        </label>
+                        {{ form.importo_autorizzato_sirti }}
+                        {% if form.importo_autorizzato_sirti.help_text %}
+                        <small class="form-text text-muted">{{ form.importo_autorizzato_sirti.help_text }}</small>
+                        {% endif %}
+                        {% if form.importo_autorizzato_sirti.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.importo_autorizzato_sirti.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.differenza_dare_avere.id_for_label }}" class="form-label">
+                            {{ form.differenza_dare_avere.label }}
+                        </label>
+                        {{ form.differenza_dare_avere }}
+                        {% if form.differenza_dare_avere.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.differenza_dare_avere.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.ses_sirti.id_for_label }}" class="form-label">
+                            {{ form.ses_sirti.label }}
+                        </label>
+                        {{ form.ses_sirti }}
+                        {% if form.ses_sirti.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.ses_sirti.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Notes and Assignments -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-people me-2"></i>
+                            Notes and Assignments
+                        </h6>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="{{ form.note.id_for_label }}" class="form-label">
+                            {{ form.note.label }}
+                        </label>
+                        {{ form.note }}
+                        {% if form.note.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.note.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.assigned_employees.id_for_label }}" class="form-label">
+                            {{ form.assigned_employees.label }}
+                        </label>
+                        {{ form.assigned_employees }}
+                        {% if form.assigned_employees.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.assigned_employees.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.used_car.id_for_label }}" class="form-label">
+                            {{ form.used_car.label }}
+                        </label>
+                        {{ form.used_car }}
+                        {% if form.used_car.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.used_car.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <a href="{% url 'interventions:intervention-list' %}" class="btn btn-outline-modern">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Cancel
+                                </a>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-primary-modern">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    {% if action == 'create' %}Create Intervention{% else %}Update Intervention{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-format currency fields
+    const currencyFields = ['tot_richiesto', 'importo_autorizzato_sirti', 'differenza_dare_avere', 'ses_sirti'];
+    
+    currencyFields.forEach(fieldName => {
+        const field = document.getElementById(`id_${fieldName}`);
+        if (field) {
+            field.addEventListener('blur', function() {
+                if (this.value && !isNaN(this.value)) {
+                    this.value = parseFloat(this.value).toFixed(2);
+                }
+            });
+        }
+    });
+    
+    // Auto-calculate difference if possible
+    const totRichiesto = document.getElementById('id_tot_richiesto');
+    const importoAutorizzato = document.getElementById('id_importo_autorizzato_sirti');
+    const differenza = document.getElementById('id_differenza_dare_avere');
+    
+    function calculateDifference() {
+        if (totRichiesto.value && importoAutorizzato.value && !isNaN(totRichiesto.value) && !isNaN(importoAutorizzato.value)) {
+            const diff = parseFloat(importoAutorizzato.value) - parseFloat(totRichiesto.value);
+            differenza.value = diff.toFixed(2);
+        }
+    }
+    
+    if (totRichiesto && importoAutorizzato && differenza) {
+        totRichiesto.addEventListener('blur', calculateDifference);
+        importoAutorizzato.addEventListener('blur', calculateDifference);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

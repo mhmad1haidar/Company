@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Download</title>
+</head>
+<body>
+    <h1>Test Download</h1>
+    <button onclick="testDownload()">Test Excel Download</button>
+    
+    <script>
+    function testDownload() {
+        console.log('Testing download...');
+        
+        fetch('/attendance/timesheet/?month=10&year=2024&format=excel&employee=all')
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Content type:', response.headers.get('Content-Type'));
+                
+                if (!response.ok) {
+                    throw new Error('Download failed');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                console.log('Blob created, size:', blob.size);
+                
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'test_timesheet.xlsx';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                window.URL.revokeObjectURL(url);
+                console.log('Download complete');
+            })
+            .catch(error => {
+                console.error('Download error:', error);
+                alert('Download failed: ' + error.message);
+            });
+    }
+    </script>
+</body>
+</html>

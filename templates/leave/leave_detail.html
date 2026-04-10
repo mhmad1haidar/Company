@@ -1,0 +1,66 @@
+{% extends "base_modern.html" %}
+{% block title %}Leave Details - Business Platform{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="row" style="justify-content: space-between; align-items: center;">
+    <h1 style="margin: 0;">Leave Request Details</h1>
+    <span class="btn btn-{{ leave.status|yesno:"success,ghost,danger" }}">
+      {{ leave.get_status_display }}
+    </span>
+  </div>
+  
+  <div style="margin-top: 1.5rem;">
+    <dl>
+      <dt>Leave Type</dt>
+      <dd>{{ leave.leave_type.name }}</dd>
+      
+      <dt>Duration</dt>
+      <dd>
+        {{ leave.start_date|date:"M d, Y" }} – {{ leave.end_date|date:"M d, Y" }}
+        {% with leave.days_count|default:1 as days %}
+          ({{ days }} day{{ days|pluralize }})
+        {% endwith %}
+      </dd>
+      
+      <dt>Requested On</dt>
+      <dd>{{ leave.created_at|date:"M d, Y H:i" }}</dd>
+      
+      {% if leave.approved_by %}
+      <dt>Approved/Rejected By</dt>
+      <dd>{{ leave.approved_by.get_full_name|default:leave.approved_by.get_username }}</dd>
+      
+      <dt>Approved/Rejected At</dt>
+      <dd>{{ leave.approved_at|date:"M d, Y H:i" }}</dd>
+      {% endif %}
+      
+      {% if leave.reason %}
+      <dt>Reason</dt>
+      <dd>{{ leave.reason|linebreaks }}</dd>
+      {% endif %}
+      
+      {% if leave.attachment %}
+      <dt>Attachment</dt>
+      <dd>
+        <a href="{{ leave.attachment.url }}" target="_blank" class="btn btn-outline-modern btn-sm">
+          <i class="bi bi-paperclip me-2"></i>
+          Download Attachment
+        </a>
+      </dd>
+      {% endif %}
+    </dl>
+  </div>
+  
+  {% if leave.status == 'pending' %}
+  <div class="row" style="margin-top: 1.5rem;">
+    <p class="muted">Your request is pending approval by the administration.</p>
+  </div>
+  {% endif %}
+  
+  <div class="row" style="margin-top: 1.5rem;">
+    <a href="{% url 'leave:leave_list' %}" class="btn btn-ghost">Back to List</a>
+    {% if leave.status == 'pending' %}
+    <a href="{% url 'leave:leave_request' %}" class="btn btn-primary">Request Another Leave</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

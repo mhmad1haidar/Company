@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Assignment: {{ assignment.codice_nigit }}{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>{{ assignment.codice_nigit }}</h1>
+            <p>{{ assignment.intervention_name|default:"No name" }} - {{ assignment.client_name|default:"No client" }}</p>
+        </div>
+        <div class="page-actions">
+            {% if perms.assignments.change_assignment %}
+            <a href="{% url 'assignments:assignment-update' assignment.pk %}" class="btn btn-primary-modern">
+                <i class="bi bi-pencil me-2"></i>
+                Edit Assignment
+            </a>
+            {% endif %}
+            <a href="{% url 'assignments:assignment-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="row mb-4">
+        <div class="col-12">
+            {% with status_colors="pending:warning,assigned:info,in_progress:primary,completed:success,cancelled:danger" %}
+                {% for status_color in status_colors.split %}
+                    {% with status_pair=status_color.split %}
+                        {% if assignment.status == status_pair.0 %}
+                            <div class="alert alert-{{ status_pair.1 }} d-flex align-items-center" role="alert">
+                                <div class="me-3">
+                                    <span class="badge bg-{{ status_pair.1 }} fs-6">
+                                        {{ assignment.get_status_display }}
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>Current Status:</strong> {{ assignment.get_status_display }}
+                                    {% if assignment.scheduled_date %}
+                                        <br>
+                                        <strong>Scheduled:</strong> {{ assignment.scheduled_date|date:"d/m/Y H:i" }}
+                                        {% if assignment.is_overdue %}
+                                            <span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Overdue</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                {% if can_update_status %}
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#statusModal">
+                                        <i class="bi bi-arrow-repeat"></i> Update Status
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Assignment Details -->
+        <div class="col-md-8">
+            <!-- Basic Information -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Assignment Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td class="text-muted" style="width: 40%;">Codice NIGIT:</td>
+                                    <td><strong>{{ assignment.codice_nigit }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Client:</td>
+                                    <td>{{ assignment.client_name|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Intervention:</td>
+                                    <td>{{ assignment.intervention_name|default:"-" }}</td>
+                                </tr>
+                                {% if assignment.intervention %}
+                                <tr>
+                                    <td class="text-muted">International Code:</td>
+                                    <td>{{ assignment.intervention.international_code|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Codice Sito:</td>
+                                    <td>{{ assignment.intervention.codice_sito|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Tipologia Intervento:</td>
+                                    <td>{{ assignment.intervention.tipologia_intervento|default:"-" }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td class="text-muted">Assigned To:</td>
+                                    <td>
+                                        {% for user in assignment.assigned_to.all %}
+                                            {{ user.get_full_name|default:user.username }}
+                                            {% if user.email %}<br><small class="text-muted">{{ user.email }}</small>{% endif %}
+                                            {% if not forloop.last %}<br><br>{% endif %}
+                                        {% empty %}
+                                            <span class="text-muted">No employees assigned</span>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td class="text-muted" style="width: 40%;">Vehicle:</td>
+                                    <td>
+                                        {% if assignment.vehicle %}
+                                            {{ assignment.vehicle.make }} {{ assignment.vehicle.model }}
+                                            <br>
+                                            <small class="text-muted">{{ assignment.vehicle.license_plate }}</small>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Assigned Date:</td>
+                                    <td>{{ assignment.assigned_date|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Scheduled Date:</td>
+                                    <td>
+                                        {% if assignment.scheduled_date %}
+                                            {{ assignment.scheduled_date|date:"d/m/Y H:i" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if assignment.completed_date %}
+                                <tr>
+                                    <td class="text-muted">Completed Date:</td>
+                                    <td>{{ assignment.completed_date|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% if assignment.completed_by %}
+                                <tr>
+                                    <td class="text-muted">Completed By:</td>
+                                    <td>{{ assignment.completed_by.get_full_name|default:assignment.completed_by.username }}</td>
+                                </tr>
+                                {% endif %}
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignment Instructions -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-clipboard-text me-2"></i>
+                        Assignment Instructions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Instructions:</strong>
+                    </div>
+                    <div class="border rounded p-3 bg-light">
+                        {{ assignment.assignment_note|linebreaks }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completion Information -->
+            {% if assignment.completion_note %}
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-check-circle me-2 text-success"></i>
+                        Completion Notes
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>Completed by {{ assignment.completed_by.get_full_name|default:assignment.completed_by.username }} on {{ assignment.completed_date|date:"d/m/Y H:i" }}</strong>
+                    </div>
+                    <div class="border rounded p-3 bg-success bg-opacity-10">
+                        {{ assignment.completion_note|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Site Information -->
+            {% if assignment.site_address %}
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Site Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p><strong>Address:</strong> {{ assignment.site_address }}</p>
+                            {% if assignment.site_latitude and assignment.site_longitude %}
+                            <p><strong>Coordinates:</strong> {{ assignment.site_latitude }}, {{ assignment.site_longitude }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{{ assignment.get_maps_url }}" target="_blank" class="btn btn-outline-modern me-2">
+                                <i class="bi bi-map me-1"></i> View Map
+                            </a>
+                            <a href="{{ assignment.get_directions_url }}" target="_blank" class="btn btn-primary-modern">
+                                <i class="bi bi-directions me-1"></i> Directions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Quick Actions -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-lightning me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="d-grid gap-2">
+                        {% if assignment.status != 'completed' and request.user in assignment.assigned_to.all %}
+                        <button type="button" class="btn btn-success-modern" data-bs-toggle="modal" data-bs-target="#completeModal">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Mark as Completed
+                        </button>
+                        {% endif %}
+                        {% if assignment.site_address %}
+                        <a href="{{ assignment.get_directions_url }}" target="_blank" class="btn btn-primary-modern">
+                            <i class="bi bi-directions me-2"></i>
+                            Get Directions
+                        </a>
+                        {% endif %}
+                        {% if request.user.is_superuser %}
+                        {% if assignment.intervention %}
+                        <a href="{% url 'interventions:intervention-detail' assignment.intervention.pk %}" class="btn btn-outline-modern">
+                            <i class="bi bi-tools me-2"></i>
+                            View Intervention
+                        </a>
+                        {% endif %}
+                        {% endif %}
+                        {% if request.user.is_superuser %}
+                        {% if assignment.vehicle %}
+                        <a href="{% url 'fleet:car_detail' assignment.vehicle.pk %}" class="btn btn-outline-modern">
+                            <i class="bi bi-truck me-2"></i>
+                            View Vehicle
+                        </a>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Timeline
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6>Assignment Created</h6>
+                                <p class="text-muted small">{{ assignment.created_at|date:"d/m/Y H:i" }}</p>
+                                <p>by {{ assignment.created_by.get_full_name|default:assignment.created_by.username }}</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6>Assigned to Employees</h6>
+                                <p class="text-muted small">{{ assignment.assigned_date|date:"d/m/Y H:i" }}</p>
+                                <p>
+                                    {% for user in assignment.assigned_to.all %}
+                                        {{ user.get_full_name|default:user.username }}{% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                        No employees assigned
+                                    {% endfor %}
+                                </p>
+                            </div>
+                        </div>
+                        {% if assignment.scheduled_date %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-warning"></div>
+                            <div class="timeline-content">
+                                <h6>Scheduled for</h6>
+                                <p class="text-muted small">{{ assignment.scheduled_date|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if assignment.completed_date %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6>Completed</h6>
+                                <p class="text-muted small">{{ assignment.completed_date|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-secondary"></div>
+                            <div class="timeline-content">
+                                <h6>Last Updated</h6>
+                                <p class="text-muted small">{{ assignment.updated_at|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+{% if can_update_status %}
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'assignments:update-status' assignment.pk %}" id="statusForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">New Status</label>
+                        <select class="form-control" name="status" id="status" required>
+                            {% for status_value, status_label in assignment.STATUS_CHOICES %}
+                            <option value="{{ status_value }}" {% if assignment.status == status_value %}selected{% endif %}>
+                                {{ status_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -23px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+.timeline-content h6 {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.timeline-content p {
+    margin-bottom: 0;
+    font-size: 12px;
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+{% if can_update_status %}
+<script>
+document.getElementById('statusForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('statusModal'));
+            modal.hide();
+            
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="bi bi-check-circle me-2"></i>
+                Status updated successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert alert at the top of the page
+            const container = document.querySelector('.main-content');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Reload page after a short delay to show updated status
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating status.');
+    });
+});
+</script>
+
+<!-- Completion Modal -->
+<div class="modal fade" id="completeModal" tabindex="-1" aria-labelledby="completeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="completeModalLabel">
+                    <i class="bi bi-check-circle me-2 text-success"></i>
+                    Complete Assignment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="completeForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        You are about to mark this assignment as completed. Please add any notes about the work performed.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="completion_note" class="form-label">Completion Notes</label>
+                        <textarea class="form-control" id="completion_note" name="completion_note" rows="4" 
+                                  placeholder="Describe what was accomplished, any issues encountered, etc."></textarea>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-12">
+                            <h6 class="text-muted">{{ assignment.codice_nigit }}</h6>
+                            <small class="text-muted">{{ assignment.intervention_name|truncatechars:50 }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-2"></i>Mark as Completed
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('completeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const url = "{% url 'assignments:complete-assignment' assignment.pk %}";
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('completeModal'));
+            modal.hide();
+            
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="bi bi-check-circle me-2"></i>
+                Assignment marked as completed successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert alert at the top of the page
+            const container = document.querySelector('.main-content');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Reload page after a short delay to show updated status
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while completing the assignment.');
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

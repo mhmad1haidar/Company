@@ -1,0 +1,187 @@
+{% extends "base_modern.html" %}
+{% block title %}Settings - Business Platform{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col">
+      <h1 class="h3 mb-1">Settings</h1>
+      <p class="text-muted">Configure your application preferences and account settings.</p>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- General Settings -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">General Settings</h5>
+        </div>
+        <div class="card-body">
+          <form>
+            <div class="mb-3">
+              <label for="language" class="form-label">Language</label>
+              <select class="form-control" id="language" disabled>
+                <option>English</option>
+                <option>Spanish</option>
+                <option>French</option>
+              </select>
+              <div class="form-text">Choose your preferred language for the interface.</div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="timezone" class="form-label">Timezone</label>
+              <select class="form-control" id="timezone" disabled>
+                <option>UTC</option>
+                <option>Eastern Time (ET)</option>
+                <option>Pacific Time (PT)</option>
+              </select>
+              <div class="form-text">Set your local timezone for accurate time display.</div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="dateFormat" class="form-label">Date Format</label>
+              <select class="form-control" id="dateFormat" disabled>
+                <option>MM/DD/YYYY</option>
+                <option>DD/MM/YYYY</option>
+                <option>YYYY-MM-DD</option>
+              </select>
+              <div class="form-text">Choose your preferred date format.</div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" disabled>
+              <i class="bi bi-check-lg me-2"></i>Save Changes
+            </button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Notification Settings -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Notification Settings</h5>
+        </div>
+        <div class="card-body">
+          <form>
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="emailNotifications" checked disabled>
+                <label class="form-check-label" for="emailNotifications">
+                  Email Notifications
+                </label>
+                <div class="form-text">Receive email notifications for important updates.</div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="leaveReminders" checked disabled>
+                <label class="form-check-label" for="leaveReminders">
+                  Leave Request Reminders
+                </label>
+                <div class="form-text">Get reminded about upcoming leave requests.</div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="attendanceAlerts" checked disabled>
+                <label class="form-check-label" for="attendanceAlerts">
+                  Attendance Alerts
+                </label>
+                <div class="form-text">Receive alerts for attendance-related activities.</div>
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" disabled>
+              <i class="bi bi-check-lg me-2"></i>Save Preferences
+            </button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Security Settings -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Security Settings</h5>
+        </div>
+        <div class="card-body">
+          <form>
+            <div class="mb-3">
+              <label for="currentPassword" class="form-label">Current Password</label>
+              <input type="password" class="form-control" id="currentPassword" disabled>
+            </div>
+            
+            <div class="mb-3">
+              <label for="newPassword" class="form-label">New Password</label>
+              <input type="password" class="form-control" id="newPassword" disabled>
+            </div>
+            
+            <div class="mb-3">
+              <label for="confirmPassword" class="form-label">Confirm New Password</label>
+              <input type="password" class="form-control" id="confirmPassword" disabled>
+            </div>
+            
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" disabled>
+                <i class="bi bi-shield-check me-2"></i>Update Password
+              </button>
+              <button type="button" class="btn btn-outline-secondary" disabled>
+                <i class="bi bi-arrow-clockwise me-2"></i>Two-Factor Authentication
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4">
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary" disabled>
+              <i class="bi bi-download me-2"></i>Export Data
+            </button>
+            <button type="button" class="btn btn-outline-secondary" disabled>
+              <i class="bi bi-clock-history me-2"></i>View Activity Log
+            </button>
+            <button type="button" class="btn btn-outline-danger" disabled>
+              <i class="bi bi-trash me-2"></i>Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Account Info -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Account Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-2">
+            <small class="text-muted">Member Since</small>
+            <div class="fw-semibold">{{ user.date_joined|date:"M d, Y" }}</div>
+          </div>
+          <div class="mb-2">
+            <small class="text-muted">Last Login</small>
+            <div class="fw-semibold">{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</div>
+          </div>
+          <div>
+            <small class="text-muted">Account Status</small>
+            <div class="fw-semibold">
+              {% if user.is_active %}
+                <span class="badge bg-success">Active</span>
+              {% else %}
+                <span class="badge bg-danger">Inactive</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

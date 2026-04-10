@@ -1,0 +1,217 @@
+{% extends "base_modern.html" %}
+{% block title %}Leave Requests - Platform{% endblock %}
+{% block content %}
+<div class="main-content">
+    <!-- Compact Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Leave Requests</h1>
+            <p>Manage your time-off requests and view their status</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outline-modern">
+                <i class="bi bi-filter me-2"></i>
+                Filter
+            </button>
+            <a href="{% url 'leave:leave_request' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i>
+                Request Leave
+            </a>
+        </div>
+    </div>
+
+{% if leaves %}
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-calendar3 me-2 text-primary"></i>
+                Your Leave Requests
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-modern btn-sm">
+                    <i class="bi bi-search"></i>
+                </button>
+                <button class="btn btn-outline-modern btn-sm">
+                    <i class="bi bi-download"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body-modern p-0">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Leave Type</th>
+                            <th>Duration</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Approved By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon primary me-3" style="width: 32px; height: 32px; margin-bottom: 0; font-size: 14px;">
+                                        <i class="bi bi-calendar3"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">{{ leave.leave_type.name }}</div>
+                                        <small class="text-muted">Requested {{ leave.created_at|date:"M d, Y" }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <div class="fw-medium">{{ leave.start_date|date:"M d" }} – {{ leave.end_date|date:"M d, Y" }}</div>
+                                    <small class="text-muted">
+                                        {% with leave.days_count|default:1 as days %}
+                                            {{ days }} day{{ days|pluralize }}
+                                        {% endwith %}
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if leave.reason %}
+                                    <div>{{ leave.reason|truncatewords:10 }}</div>
+                                {% else %}
+                                    <span class="text-muted">No reason provided</span>
+                                {% endif %}
+                                {% if leave.attachment %}
+                                    <div class="mt-1">
+                                        <a href="{{ leave.attachment.url }}" target="_blank" class="text-primary small">
+                                            <i class="bi bi-paperclip me-1"></i>
+                                            <span class="text-decoration-underline">View attachment</span>
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-modern badge-{{ leave.status_color|default:'secondary' }}-modern">
+                                    {% if leave.status == 'pending' %}
+                                        <i class="bi bi-clock me-1"></i>{{ leave.get_status_display }}
+                                    {% elif leave.status == 'approved' %}
+                                        <i class="bi bi-check-circle me-1"></i>{{ leave.get_status_display }}
+                                    {% elif leave.status == 'rejected' %}
+                                        <i class="bi bi-x-circle me-1"></i>{{ leave.get_status_display }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if leave.approved_by %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 10px;">
+                                            {{ leave.approved_by.get_username|first|upper }}
+                                        </div>
+                                        <div>
+                                            <div class="small fw-medium">{{ leave.approved_by.get_full_name|default:leave.approved_by.get_username }}</div>
+                                            {% if leave.approved_at %}
+                                                <small class="text-muted">{{ leave.approved_at|date:"M d" }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-modern btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'leave:leave_detail' leave.pk %}">
+                                                <i class="bi bi-eye me-2"></i>View Details
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Compact Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Leave requests pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+{% else %}
+    <div class="empty-state">
+        <i class="bi bi-calendar-x"></i>
+        <h5 class="empty-state-title">No Leave Requests</h5>
+        <p class="empty-state-text">You haven't submitted any leave requests yet. Request time off when you need it.</p>
+        <a href="{% url 'leave:leave_request' %}" class="btn btn-primary-modern">
+            <i class="bi bi-plus-circle me-2"></i>
+            Request Your First Leave
+        </a>
+    </div>
+{% endif %}
+</div>
+
+<style>
+.pagination .page-link {
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    margin: 0 2px;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    font-size: var(--font-sm);
+}
+
+.pagination .page-link:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination .page-item:first-child .page-link,
+.pagination .page-item:last-child .page-link {
+    border-radius: var(--border-radius);
+}
+</style>
+{% endblock %}

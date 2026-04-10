@@ -1,0 +1,365 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}Interventions - Platform{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>Interventions</h1>
+            <p>Gestisci gli interventi tecnici</p>
+        </div>
+        <div class="page-actions">
+            {% if perms.interventions.add_intervention %}
+            <a href="{% url 'interventions:intervention-create' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i>
+                New Intervention
+            </a>
+            <a href="{% url 'interventions:intervention-import' %}" class="btn btn-success-modern">
+                <i class="bi bi-upload me-2"></i>
+                Import CSV/Excel
+            </a>
+            {% endif %}
+            <a href="{% url 'interventions:intervention-export-csv' %}" class="btn btn-outline-modern">
+                <i class="bi bi-download me-2"></i>
+                Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title-modern text-muted">Total Interventions</h6>
+                            <h3 class="mb-0">{{ total_interventions }}</h3>
+                        </div>
+                        <div class="text-primary">
+                            <i class="bi bi-clipboard-data" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title-modern text-muted">Total Value</h6>
+                            <h3 class="mb-0">€{{ total_value|floatformat:2 }}</h3>
+                        </div>
+                        <div class="text-success">
+                            <i class="bi bi-currency-euro" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title-modern text-muted">Active</h6>
+                            <h3 class="mb-0">
+                                {% for status in status_breakdown %}
+                                    {% if status.stato_avanzamento_nigit == 'IN_CORSO' %}
+                                        {{ status.count }}
+                                    {% endif %}
+                                {% endfor %}
+                            </h3>
+                        </div>
+                        <div class="text-warning">
+                            <i class="bi bi-clock" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title-modern text-muted">Completed</h6>
+                            <h3 class="mb-0">
+                                {% for status in status_breakdown %}
+                                    {% if status.stato_avanzamento_nigit == 'COMPLETATO' %}
+                                        {{ status.count }}
+                                    {% endif %}
+                                {% endfor %}
+                            </h3>
+                        </div>
+                        <div class="text-success">
+                            <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card-modern mb-4">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-search me-2"></i>
+                Search & Filter
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    {{ search_form.search_field.label_tag }}
+                    {{ search_form.search_field }}
+                </div>
+                <div class="col-md-3">
+                    {{ search_form.search_value.label_tag }}
+                    {{ search_form.search_value }}
+                </div>
+                <div class="col-md-2">
+                    {{ search_form.stato_avanzamento.label_tag }}
+                    {{ search_form.stato_avanzamento }}
+                </div>
+                <div class="col-md-2">
+                    {{ search_form.anno_intervento.label_tag }}
+                    {{ search_form.anno_intervento }}
+                </div>
+                <div class="col-md-2">
+                    {{ search_form.cliente_filter.label_tag }}
+                    {{ search_form.cliente_filter }}
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary-modern">
+                        <i class="bi bi-search me-2"></i>
+                        Search
+                    </button>
+                    <a href="{% url 'interventions:intervention-list' %}" class="btn btn-outline-modern">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Clear
+                    </a>
+                    {% if perms.interventions.delete_intervention %}
+                    <button type="button" class="btn btn-outline-modern text-danger ms-2" id="bulkDeleteBtn" style="display: none;">
+                        <i class="bi bi-trash me-2"></i>
+                        Delete Selected (<span id="selectedCount">0</span>)
+                    </button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interventions List -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-list-ul me-2"></i>
+                Interventions List
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            {% if interventions %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
+                            <th>Codice NIGIT</th>
+                            <th>Cliente</th>
+                            <th>Nome</th>
+                            <th>Stato</th>
+                            <th>Data Richiesta</th>
+                            <th>Tot Richiesto</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for intervention in interventions %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="selected_interventions" value="{{ intervention.pk }}" class="form-check-input intervention-checkbox">
+                            </td>
+                            <td>
+                                <strong>{{ intervention.codice_nigit|default:"-" }}</strong>
+                            </td>
+                            <td>{{ intervention.cliente|default:"-" }}</td>
+                            <td>{{ intervention.nome|default:"-" }}</td>
+                            <td>
+                                {% if intervention.stato_avanzamento_nigit %}
+                                    {% with status_colors="DA_INIZIARE:warning,IN_CORSO:info,COMPLETATO:success,SOSPESO:secondary,ANNULLATO:danger" %}
+                                        {% for status_color in status_colors.split %}
+                                            {% with status_pair=status_color.split %}
+                                                {% if intervention.stato_avanzamento_nigit == status_pair.0 %}
+                                                    <span class="badge bg-{{ status_pair.1 }}">
+                                                        {{ intervention.get_stato_avanzamento_nigit_display }}
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endfor %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Non impostato</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ intervention.data_richiesta|default:"-" }}</td>
+                            <td>
+                                {% if intervention.tot_richiesto %}
+                                    €{{ intervention.tot_richiesto|floatformat:2 }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'interventions:intervention-detail' intervention.pk %}" 
+                                       class="btn btn-sm btn-outline-modern" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if perms.interventions.change_intervention %}
+                                    <a href="{% url 'interventions:intervention-update' intervention.pk %}" 
+                                       class="btn btn-sm btn-outline-modern" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.interventions.delete_intervention %}
+                                    <a href="{% url 'interventions:intervention-delete' intervention.pk %}" 
+                                       class="btn btn-sm btn-outline-modern text-danger" title="Delete"
+                                       onclick="return confirm('Sei sicuro di voler eliminare questo intervento?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>
+                <h5 class="mt-3">No interventions found</h5>
+                <p class="text-muted">There are no interventions matching your search criteria.</p>
+                {% if perms.interventions.add_intervention %}
+                <a href="{% url 'interventions:intervention-create' %}" class="btn btn-primary-modern">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Create First Intervention
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+{% if perms.interventions.delete_intervention %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const interventionCheckboxes = document.querySelectorAll('.intervention-checkbox');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.intervention-checkbox:checked').length;
+        selectedCount.textContent = checked;
+        bulkDeleteBtn.style.display = checked > 0 ? 'inline-block' : 'none';
+    }
+
+    // Select all functionality
+    selectAllCheckbox.addEventListener('change', function() {
+        interventionCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectedCount();
+    });
+
+    // Individual checkbox change
+    interventionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Bulk delete functionality
+    bulkDeleteBtn.addEventListener('click', function() {
+        const selected = [];
+        document.querySelectorAll('.intervention-checkbox:checked').forEach(checkbox => {
+            selected.push(checkbox.value);
+        });
+
+        if (selected.length === 0) {
+            alert('Please select at least one intervention to delete.');
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete ${selected.length} intervention(s)? This action cannot be undone.`)) {
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "interventions:intervention-bulk-delete" %}';
+            
+            // Add CSRF token
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = '{{ csrf_token }}';
+            form.appendChild(csrfToken);
+            
+            // Add selected interventions
+            selected.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_interventions';
+                input.value = id;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
+
+{% endblock %}

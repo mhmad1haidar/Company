@@ -1,0 +1,121 @@
+{% extends "base_modern.html" %}
+{% block title %}Notifications - Business Platform{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col">
+      <h1 class="h3 mb-1">Notifications</h1>
+      <p class="text-muted">View all your notifications</p>
+    </div>
+    <div class="col-auto">
+      <button onclick="markAllAsRead()" class="btn btn-primary-modern">
+        <i class="bi bi-check-all me-2"></i>Mark All as Read
+      </button>
+    </div>
+  </div>
+  
+  <div class="card-modern">
+    <div class="card-body-modern">
+      {% if notifications %}
+      <div class="table-responsive">
+        <table class="table table-modern">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Title</th>
+              <th>Message</th>
+              <th>Time</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for notification in notifications %}
+            <tr class="{% if not notification.is_read %}table-light{% endif %}">
+              <td>
+                {% if not notification.is_read %}
+                <span class="badge badge-primary-modern">New</span>
+                {% else %}
+                <span class="text-muted">Read</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="fw-semibold">{{ notification.title }}</div>
+              </td>
+              <td>
+                <div class="text-muted">{{ notification.message }}</div>
+              </td>
+              <td>
+                <div class="text-muted small">{{ notification.created_at|date:"M d, Y H:i" }}</div>
+              </td>
+              <td>
+                {% if notification.link %}
+                <a href="{{ notification.link }}" class="btn btn-sm btn-outline-modern">
+                  <i class="bi bi-arrow-right"></i> View
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      {% if is_paginated %}
+      <nav aria-label="Notifications pagination">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+          </li>
+          {% endif %}
+          
+          {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+          </li>
+          {% else %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          </li>
+          {% endif %}
+          {% endfor %}
+          
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+      
+      {% else %}
+      <div class="empty-state">
+        <i class="bi bi-bell-slash"></i>
+        <div class="empty-state-title">No Notifications</div>
+        <div class="empty-state-text">You don't have any notifications yet.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function markAllAsRead() {
+  fetch('/accounts/notifications/mark-read/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      location.reload();
+    }
+  })
+  .catch(error => console.error('Error marking all as read:', error));
+}
+</script>
+{% endblock %}

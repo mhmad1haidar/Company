@@ -1,0 +1,227 @@
+{% extends "base_modern.html" %}
+{% block title %}{{ car.plate_number }} - Vehicle Details{% endblock %}
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>{{ car.plate_number }}</h1>
+            <p>Vehicle details and management</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'fleet:car_list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Fleet
+            </a>
+            <a href="{% url 'fleet:car_edit' car.id %}" class="btn btn-primary-modern">
+                <i class="bi bi-pencil me-2"></i>
+                Edit Vehicle
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Vehicle Details -->
+        <div class="col-lg-8">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-truck me-2"></i>
+                        Vehicle Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Plate Number</label>
+                                <div class="info-value-modern">{{ car.plate_number }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Status</label>
+                                <div>
+                                    {% if car.status == 'available' %}
+                                        <span class="badge badge-modern badge-success-modern">
+                                            <i class="bi bi-check-circle me-1"></i>{{ car.get_status_display }}
+                                        </span>
+                                    {% elif car.status == 'assigned' %}
+                                        <span class="badge badge-modern badge-primary-modern">
+                                            <i class="bi bi-person me-1"></i>{{ car.get_status_display }}
+                                        </span>
+                                    {% elif car.status == 'maintenance' %}
+                                        <span class="badge badge-modern badge-warning-modern">
+                                            <i class="bi bi-wrench me-1"></i>{{ car.get_status_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-modern badge-danger-modern">
+                                            <i class="bi bi-x-circle me-1"></i>{{ car.get_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Make & Model</label>
+                                <div class="info-value-modern">{{ car.brand }} {{ car.model }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Year</label>
+                                <div class="info-value-modern">{{ car.year }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Color</label>
+                                <div class="info-value-modern">{{ car.color|default:"Not specified" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Fuel Type</label>
+                                <div class="info-value-modern">{{ car.get_fuel_type_display }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-group-modern">
+                                <label class="info-label-modern">Assigned To</label>
+                                <div class="info-value-modern">
+                                    {% if car.assigned_employee %}
+                                        {{ car.assigned_employee.get_full_name|default:car.assigned_employee.username }}
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-lg-4">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-lightning me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'fleet:maintenance_create' car.id %}" class="btn btn-outline-modern text-start">
+                            <i class="bi bi-wrench me-2"></i>
+                            <div>
+                                <div class="fw-medium">Add Maintenance</div>
+                                <div class="text-muted small">Record service or repair</div>
+                            </div>
+                        </a>
+                        <a href="{% url 'fleet:fuel_add' car.id %}" class="btn btn-outline-modern text-start">
+                            <i class="bi bi-fuel-pump me-2"></i>
+                            <div>
+                                <div class="fw-medium">Add Fuel Log</div>
+                                <div class="text-muted small">Record fuel purchase</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance History -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-tools me-2"></i>
+                        Maintenance History
+                    </h5>
+                </div>
+                <div class="card-body-modern p-0">
+                    <div class="table-responsive">
+                        <table class="table table-modern mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Cost</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for maintenance in car.maintenance_history.all %}
+                                <tr>
+                                    <td>{{ maintenance.date|date:"M d, Y" }}</td>
+                                    <td>
+                                        <span class="badge badge-modern badge-info-modern">
+                                            {{ maintenance.get_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>${{ maintenance.cost }}</td>
+                                    <td>{{ maintenance.notes|default:"No notes" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">
+                                        <div class="empty-state" style="padding: 2rem;">
+                                            <i class="bi bi-tools"></i>
+                                            <h5 class="empty-state-title">No Maintenance Records</h5>
+                                            <p class="empty-state-text">No maintenance history found for this vehicle.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fuel History -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-fuel-pump me-2"></i>
+                        Fuel History
+                    </h5>
+                </div>
+                <div class="card-body-modern p-0">
+                    <div class="table-responsive">
+                        <table class="table table-modern mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Liters</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fuel in car.fuel_logs.all %}
+                                <tr>
+                                    <td>{{ fuel.date|date:"M d, Y" }}</td>
+                                    <td>{{ fuel.liters }}L</td>
+                                    <td>${{ fuel.cost }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4">
+                                        <div class="empty-state" style="padding: 2rem;">
+                                            <i class="bi bi-fuel-pump"></i>
+                                            <h5 class="empty-state-title">No Fuel Records</h5>
+                                            <p class="empty-state-text">No fuel history found for this vehicle.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

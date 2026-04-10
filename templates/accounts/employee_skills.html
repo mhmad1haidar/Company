@@ -1,0 +1,277 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>{{ title }}</h1>
+            <p>Manage employee skills and qualifications</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'accounts:employee-detail' employee.pk %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Employee
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Add Skill Form -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Add New Skill
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form method="post" id="skillForm">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.skill_name.label }} *</label>
+                                    {{ form.skill_name }}
+                                    {% if form.skill_name.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.skill_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.skill_level.label }} *</label>
+                                    {{ form.skill_level }}
+                                    {% if form.skill_level.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.skill_level.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.years_of_experience.label }}</label>
+                                    {{ form.years_of_experience }}
+                                    {% if form.years_of_experience.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.years_of_experience.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.certification.label }}</label>
+                                    {{ form.certification }}
+                                    {% if form.certification.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.certification.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.certification_date.label }}</label>
+                                    {{ form.certification_date }}
+                                    {% if form.certification_date.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.certification_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.expiry_date.label }}</label>
+                                    {{ form.expiry_date }}
+                                    {% if form.expiry_date.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.expiry_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary-modern">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Add Skill
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Skills List -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-award me-2"></i>
+                        Employee Skills ({{ skills.count }})
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if skills %}
+                    <div class="row">
+                        {% for skill in skills %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card-modern">
+                                <div class="card-body-modern">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ skill.skill_name }}</h6>
+                                            <div class="mb-2">
+                                                <span class="badge bg-primary">{{ skill.get_skill_level_display }}</span>
+                                                {% if skill.years_of_experience %}
+                                                <span class="badge bg-info ms-1">{{ skill.years_of_experience }} years</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if skill.certification %}
+                                            <p class="mb-1">
+                                                <strong>Certification:</strong> {{ skill.certification }}
+                                            </p>
+                                            {% if skill.certification_date %}
+                                            <small class="text-muted">
+                                                Issued: {{ skill.certification_date|date:"d/m/Y" }}
+                                                {% if skill.expiry_date %}
+                                                | Expires: {{ skill.expiry_date|date:"d/m/Y" }}
+                                                {% endif %}
+                                            </small>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-modern" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-modern text-danger" title="Delete"
+                                                    onclick="deleteSkill('{{ skill.pk }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-award" style="font-size: 3rem; color: #6c757d;"></i>
+                        <h5 class="mt-3">No Skills</h5>
+                        <p class="text-muted">No skills have been added for this employee.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+</div>
+
+<script>
+function deleteSkill(skillId) {
+    if (confirm('Are you sure you want to delete this skill? This action cannot be undone.')) {
+        fetch('/accounts/employees/skills/' + skillId + '/delete/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the skill.');
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.card-modern {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.card-header-modern {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+}
+
+.text-primary {
+    color: var(--primary) !important;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.btn-primary-modern {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-primary-modern:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+</style>
+{% endblock %}

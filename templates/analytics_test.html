@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Attendance Analytics Test</h1>
+    <canvas id="testChart" width="400" height="200"></canvas>
+    
+    <script>
+        fetch('/attendance/analytics/')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Analytics data:', data);
+                
+                // Test chart rendering
+                const ctx = document.getElementById('testChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: data.line_chart,
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '30-Day Attendance Trend'
+                            }
+                        }
+                    }
+                });
+                
+                document.body.innerHTML += '<p>Charts loaded successfully! Attendance rate: ' + data.summary.attendance_rate + '%</p>';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.body.innerHTML += '<p>Error loading analytics</p>';
+            });
+    </script>
+</body>
+</html>

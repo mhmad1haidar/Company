@@ -1,0 +1,183 @@
+{% extends "base_modern.html" %}
+{% block title %}Fleet Management - Platform{% endblock %}
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Fleet Management</h1>
+            <p>Manage company vehicles and maintenance records</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'fleet:car_create' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i>
+                Add Vehicle
+            </a>
+        </div>
+    </div>
+
+    <!-- Fleet Stats -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon success">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <div class="stat-value">{{ available_cars }}</div>
+                    <div class="stat-label">Available</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon warning">
+                        <i class="bi bi-wrench"></i>
+                    </div>
+                    <div class="stat-value">{{ cars_in_maintenance }}</div>
+                    <div class="stat-label">Maintenance</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon info">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div class="stat-value">{{ cars|length }}</div>
+                    <div class="stat-label">Total Vehicles</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Options -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-funnel me-2"></i>
+                        Filter Vehicles
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href="?status=" class="btn {% if request.GET.status == '' %}btn-primary-modern{% else %}btn-outline-modern{% endif %}">
+                                <i class="bi bi-grid-3x3-gap me-2"></i>
+                                All Vehicles
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="?status=available" class="btn {% if request.GET.status == 'available' %}btn-primary-modern{% else %}btn-outline-modern{% endif %}">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Available
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="?status=maintenance" class="btn {% if request.GET.status == 'maintenance' %}btn-primary-modern{% else %}btn-outline-modern{% endif %}">
+                                <i class="bi bi-wrench me-2"></i>
+                                Maintenance
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cars Table -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-truck me-2"></i>
+                Vehicles
+            </h5>
+        </div>
+        <div class="card-body-modern p-0">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Plate Number</th>
+                            <th>Vehicle</th>
+                            <th>Year</th>
+                            <th>Status</th>
+                            <th>Assigned To</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for car in cars %}
+                        <tr>
+                            <td>
+                                <div class="fw-medium">{{ car.plate_number }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-medium">{{ car.brand }} {{ car.model }}</div>
+                            </td>
+                            <td>{{ car.year }}</td>
+                            <td>
+                                {% if car.status == 'available' %}
+                                    <span class="badge badge-modern badge-success-modern">
+                                        <i class="bi bi-check-circle me-1"></i>{{ car.get_status_display }}
+                                    </span>
+                                {% elif car.status == 'assigned' %}
+                                    <span class="badge badge-modern badge-primary-modern">
+                                        <i class="bi bi-person me-1"></i>{{ car.get_status_display }}
+                                    </span>
+                                {% elif car.status == 'maintenance' %}
+                                    <span class="badge badge-modern badge-warning-modern">
+                                        <i class="bi bi-wrench me-1"></i>{{ car.get_status_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-modern badge-danger-modern">
+                                        <i class="bi bi-x-circle me-1"></i>{{ car.get_status_display }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if car.assigned_employee %}
+                                    {{ car.assigned_employee.get_full_name|default:car.assigned_employee.username }}
+                                {% else %}
+                                    <span class="text-muted">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'fleet:car_detail' car.id %}" class="btn btn-sm btn-outline-modern">
+                                        <i class="bi bi-eye me-1"></i>
+                                        View
+                                    </a>
+                                    <a href="{% url 'fleet:car_edit' car.id %}" class="btn btn-sm btn-outline-modern">
+                                        <i class="bi bi-pencil me-1"></i>
+                                        Edit
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="empty-state" style="padding: 2rem;">
+                                    <i class="bi bi-truck"></i>
+                                    <h5 class="empty-state-title">No Vehicles Found</h5>
+                                    <p class="empty-state-text">No vehicles match the current filter criteria.</p>
+                                    <a href="{% url 'fleet:car_create' %}" class="btn btn-primary-modern">
+                                        <i class="bi bi-plus-circle me-2"></i>
+                                        Add First Vehicle
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

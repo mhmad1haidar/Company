@@ -1,0 +1,232 @@
+{% extends "base_modern.html" %}
+{% block title %}Interventions Management - Platform{% endblock %}
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Interventions Management</h1>
+            <p>Track and manage interventions and maintenance activities</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'interventions:intervention_create' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i>
+                New Intervention
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon primary">
+                        <i class="bi bi-list-check"></i>
+                    </div>
+                    <div class="stat-value">{{ total_interventions }}</div>
+                    <div class="stat-label">Total Interventions</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-value">{{ active_interventions }}</div>
+                    <div class="stat-label">Active/Pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-funnel me-2"></i>
+                        Filter Interventions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <div class="form-group-modern">
+                                <label for="status" class="form-label-modern">Status</label>
+                                <select name="status" class="form-control-modern">
+                                    <option value="">All Status</option>
+                                    <option value="not_confirmed" {% if request.GET.status == 'not_confirmed' %}selected{% endif %}>Not Confirmed</option>
+                                    <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="finished" {% if request.GET.status == 'finished' %}selected{% endif %}>Finished</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group-modern">
+                                <label for="type" class="form-label-modern">Type</label>
+                                <select name="type" class="form-control-modern">
+                                    <option value="">All Types</option>
+                                    <option value="maintenance" {% if request.GET.type == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                                    <option value="repair" {% if request.GET.type == 'repair' %}selected{% endif %}>Repair</option>
+                                    <option value="inspection" {% if request.GET.type == 'inspection' %}selected{% endif %}>Inspection</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group-modern">
+                                <label class="form-label-modern">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary-modern">
+                                    <i class="bi bi-search me-2"></i>
+                                    Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interventions Table -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-list-check me-2"></i>
+                Interventions
+            </h5>
+        </div>
+        <div class="card-body-modern p-0">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Assigned To</th>
+                            <th>Vehicle</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for intervention in page_obj %}
+                        <tr>
+                            <td>
+                                <div class="fw-medium">{{ intervention.code }}</div>
+                            </td>
+                            <td>
+                                <span class="badge badge-modern badge-info-modern">
+                                    {{ intervention.intervention_type|title }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if intervention.status == 'not_confirmed' %}
+                                    <span class="badge badge-modern badge-warning-modern">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ intervention.status|title }}
+                                    </span>
+                                {% elif intervention.status == 'in_progress' %}
+                                    <span class="badge badge-modern badge-primary-modern">
+                                        <i class="bi bi-arrow-repeat me-1"></i>{{ intervention.status|title }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-modern badge-success-modern">
+                                        <i class="bi bi-check-circle me-1"></i>{{ intervention.status|title }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for employee in intervention.assigned_employees.all %}
+                                    {{ employee.get_full_name|default:employee.username }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    <span class="text-muted">Unassigned</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% if intervention.used_car %}
+                                    {{ intervention.used_car.plate_number }}
+                                {% else %}
+                                    <span class="text-muted">No vehicle</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ intervention.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'interventions:intervention_detail' intervention.id %}" class="btn btn-sm btn-outline-modern">
+                                        <i class="bi bi-eye me-1"></i>
+                                        View
+                                    </a>
+                                    <a href="{% url 'interventions:intervention_edit' intervention.id %}" class="btn btn-sm btn-outline-modern">
+                                        <i class="bi bi-pencil me-1"></i>
+                                        Edit
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="empty-state" style="padding: 2rem;">
+                                    <i class="bi bi-tools"></i>
+                                    <h5 class="empty-state-title">No Interventions Found</h5>
+                                    <p class="empty-state-text">No interventions match the current filter criteria.</p>
+                                    <a href="{% url 'interventions:intervention_create' %}" class="btn btn-primary-modern">
+                                        <i class="bi bi-plus-circle me-2"></i>
+                                        Create First Intervention
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="card-footer-modern">
+            <nav>
+                <ul class="pagination pagination-modern justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

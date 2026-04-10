@@ -1,0 +1,695 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Assignments{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Add any custom styles here if needed */
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Work Status Update JavaScript - ensure it loads first -->
+<script>
+console.log('My Assignments page - JavaScript loading...');
+
+function updateWorkStatus(pk, status, worked, statusText) {
+    console.log('Updating work status:', { pk, status, worked, statusText });
+    alert('updateWorkStatus called: ' + statusText + ' for PK: ' + pk);
+    
+    // For completion or not_worked status, show modal for notes
+    if (status === 'completed' || status === 'not_worked') {
+        const note = prompt(worked ? 'Enter completion notes (optional):' : 'Enter reason for not working (optional):');
+        if (note === null) return; // User cancelled
+        sendUpdate(pk, status, worked, note || '');
+    } else {
+        // Direct update for non-completion status
+        sendUpdate(pk, status, worked, '');
+    }
+}
+
+function sendUpdate(pk, status, worked, note) {
+    console.log('sendUpdate called with:', { pk, status, worked, note });
+    
+    // Use the complete_assignment view for completed status
+    if (status === 'completed') {
+        const url = `/assignments/assignment/${pk}/complete/`;
+        console.log('Using complete URL:', url);
+        
+        const formData = new FormData();
+        formData.set('completion_note', note);
+        formData.set('work_performed', worked);
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            formData.set('csrfmiddlewaretoken', csrfToken.value);
+        } else {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            if (cookieValue) {
+                formData.set('csrfmiddlewaretoken', cookieValue);
+            }
+        }
+        
+        console.log('Sending to complete view with note:', note);
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert('Status updated successfully: ' + data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while updating the status.');
+        });
+    } else {
+        // For other statuses, use the update_work_status view
+        const url = `/assignments/assignment/${pk}/update-work-status/`;
+        console.log('Using update-work-status URL:', url);
+        
+        const formData = new FormData();
+        formData.set('status', status);
+        formData.set('work_performed', worked);
+        formData.set('completion_note', note);
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            formData.set('csrfmiddlewaretoken', csrfToken.value);
+        } else {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            if (cookieValue) {
+                formData.set('csrfmiddlewaretoken', cookieValue);
+            }
+        }
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert('Status updated successfully: ' + data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while updating the status.');
+        });
+    }
+}
+
+function deleteAssignment(pk, assignmentCode) {
+    console.log('Deleting assignment:', { pk, assignmentCode });
+    
+    if (confirm(`Are you sure you want to delete assignment ${assignmentCode}? This action cannot be undone.`)) {
+        const url = `/assignments/assignment/${pk}/delete/`;
+        console.log('Using delete URL:', url);
+        
+        const formData = new FormData();
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            formData.set('csrfmiddlewaretoken', csrfToken.value);
+        } else {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            if (cookieValue) {
+                formData.set('csrfmiddlewaretoken', cookieValue);
+            }
+        }
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert('Assignment deleted successfully: ' + data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while deleting the assignment.');
+        });
+    }
+}
+
+console.log('My Assignments page - JavaScript loaded');
+</script>
+
+<!-- Test button to verify JavaScript works -->
+<button onclick="alert('JavaScript works!'); console.log('Test button clicked');" class="btn btn-danger m-3" style="position: fixed; top: 10px; right: 10px; z-index: 9999;">
+    Test JS
+</button>
+
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>My Assignments</h1>
+            <p>Work assigned to you</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'assignments:assignment-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-list-ul me-2"></i>
+                All Assignments
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern">{{ stats.total }}</h5>
+                    <p class="card-text-modern">Total Assignments</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern text-warning">{{ stats.pending }}</h5>
+                    <p class="card-text-modern">Pending</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern text-primary">{{ stats.active }}</h5>
+                    <p class="card-text-modern">Active</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern">
+                <div class="card-body-modern text-center">
+                    <h5 class="card-title-modern text-success">{{ stats.completed }}</h5>
+                    <p class="card-text-modern">Completed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Assignments -->
+    {% if pending_assignments %}
+    <div class="card-modern mb-4">
+        <div class="card-header-modern bg-warning bg-opacity-10">
+            <h5 class="card-title-modern">
+                <i class="bi bi-clock text-warning me-2"></i>
+                Pending Assignments ({{ pending_assignments.count }})
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="row">
+                {% for assignment in pending_assignments %}
+                <div class="col-md-6 mb-3">
+                    <div class="border rounded p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">{{ assignment.codice_nigit }}</h6>
+                                {% if assignment.intervention %}
+                                <small class="text-info">
+                                    {{ assignment.intervention.international_code|default:"" }}
+                                    {% if assignment.intervention.codice_sito %} | {{ assignment.intervention.codice_sito }}{% endif %}
+                                </small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-warning">Pending</span>
+                        </div>
+                        <p class="mb-2"><strong>{{ assignment.client_name|default:"No client" }}</strong></p>
+                        {% if assignment.intervention.tipologia_intervento %}
+                        <p class="mb-2 text-muted small">
+                            <i class="bi bi-tag me-1"></i>{{ assignment.intervention.tipologia_intervento }}
+                        </p>
+                        {% endif %}
+                        <p class="mb-2 text-muted small">{{ assignment.assignment_note|truncatewords:20 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                {% if assignment.scheduled_date %}
+                                    <i class="bi bi-calendar"></i> {{ assignment.scheduled_date|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <i class="bi bi-clock"></i> {{ assignment.assigned_date|date:"d/m/Y" }}
+                                {% endif %}
+                            </small>
+                            <div class="d-flex gap-2">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear me-1"></i>
+                                        Work Status
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'assigned', false, 'Assigned'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="assigned" data-worked="false">
+                                                <i class="bi bi-person-check text-info me-2"></i>
+                                                Assigned
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'in_progress', true, 'In Progress'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="in_progress" data-worked="true">
+                                                <i class="bi bi-play-circle text-primary me-2"></i>
+                                                In Progress
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'completed', true, 'Work Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="completed" data-worked="true">
+                                                <i class="bi bi-check-circle text-success me-2"></i>
+                                                Work Completed
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'not_worked', false, 'Not Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="not_worked" data-worked="false">
+                                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                                Not Completed
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-modern">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Active Assignments -->
+    {% if active_assignments %}
+    <div class="card-modern mb-4">
+        <div class="card-header-modern bg-primary bg-opacity-10">
+            <h5 class="card-title-modern">
+                <i class="bi bi-play-circle text-primary me-2"></i>
+                Active Assignments ({{ active_assignments.count }})
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="row">
+                {% for assignment in active_assignments %}
+                <div class="col-md-6 mb-3">
+                    <div class="border rounded p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">{{ assignment.codice_nigit }}</h6>
+                                {% if assignment.intervention %}
+                                <small class="text-info">
+                                    {{ assignment.intervention.international_code|default:"" }}
+                                    {% if assignment.intervention.codice_sito %} | {{ assignment.intervention.codice_sito }}{% endif %}
+                                </small>
+                                {% endif %}
+                            </div>
+                            {% if assignment.status == 'assigned' %}
+                                <span class="badge bg-info">Assigned</span>
+                            {% else %}
+                                <span class="badge bg-primary">In Progress</span>
+                            {% endif %}
+                        </div>
+                        <p class="mb-2"><strong>{{ assignment.client_name|default:"No client" }}</strong></p>
+                        {% if assignment.intervention.tipologia_intervento %}
+                        <p class="mb-2 text-muted small">
+                            <i class="bi bi-tag me-1"></i>{{ assignment.intervention.tipologia_intervento }}
+                        </p>
+                        {% endif %}
+                        <p class="mb-2 text-muted small">{{ assignment.assignment_note|truncatewords:20 }}</p>
+                        {% if assignment.site_address %}
+                        <p class="mb-2 text-muted small">
+                            <i class="bi bi-geo-alt"></i> {{ assignment.site_address|truncatechars:40 }}
+                        </p>
+                        {% endif %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                {% if assignment.scheduled_date %}
+                                    <i class="bi bi-calendar"></i> {{ assignment.scheduled_date|date:"d/m/Y H:i" }}
+                                    {% if assignment.is_overdue %}
+                                        <span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Overdue</span>
+                                    {% endif %}
+                                {% else %}
+                                    <i class="bi bi-clock"></i> {{ assignment.assigned_date|date:"d/m/Y" }}
+                                {% endif %}
+                            </small>
+                            <div class="d-flex gap-2">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear me-1"></i>
+                                        Work Status
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'assigned', false, 'Assigned'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="assigned" data-worked="false">
+                                                <i class="bi bi-person-check text-info me-2"></i>
+                                                Assigned
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'in_progress', true, 'In Progress'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="in_progress" data-worked="true">
+                                                <i class="bi bi-play-circle text-primary me-2"></i>
+                                                In Progress
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'completed', true, 'Work Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="completed" data-worked="true">
+                                                <i class="bi bi-check-circle text-success me-2"></i>
+                                                Work Completed
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'not_worked', false, 'Not Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="not_worked" data-worked="false">
+                                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                                Not Completed
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% if assignment.site_address %}
+                                <a href="{{ assignment.get_directions_url }}" target="_blank" class="btn btn-sm btn-primary-modern">
+                                    <i class="bi bi-directions"></i> Directions
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-modern">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Work Completed Assignments -->
+    {% if completed_worked_assignments %}
+    <div class="card-modern mb-4">
+        <div class="card-header-modern bg-success bg-opacity-10">
+            <h5 class="card-title-modern">
+                <i class="bi bi-check-circle text-success me-2"></i>
+                Work Completed ({{ completed_worked_assignments.count }})
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="row">
+                {% for assignment in completed_worked_assignments %}
+                <div class="col-md-6 mb-3">
+                    <div class="border rounded p-3 bg-success bg-opacity-5">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">{{ assignment.codice_nigit }}</h6>
+                                {% if assignment.intervention %}
+                                <small class="text-info">
+                                    {{ assignment.intervention.international_code|default:"" }}
+                                    {% if assignment.intervention.codice_sito %} | {{ assignment.intervention.codice_sito }}{% endif %}
+                                </small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-success">
+                            Completed
+                            <i class="bi bi-check-circle ms-1" title="Work Performed"></i>
+                        </span>
+                        </div>
+                        <p class="mb-2"><strong>{{ assignment.client_name|default:"No client" }}</strong></p>
+                        {% if assignment.intervention.tipologia_intervento %}
+                        <p class="mb-2 text-muted small">
+                            <i class="bi bi-tag me-1"></i>{{ assignment.intervention.tipologia_intervento }}
+                        </p>
+                        {% endif %}
+                        <p class="mb-2 text-muted small">{{ assignment.assignment_note|truncatewords:20 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-check-circle"></i> {{ assignment.completed_date|date:"d/m/Y H:i" }}
+                                {% if assignment.completed_by %}
+                                    by {{ assignment.completed_by.get_full_name|default:assignment.completed_by.username }}
+                                {% endif %}
+                            </small>
+                            <div class="d-flex gap-2">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear me-1"></i>
+                                        Change Status
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'assigned', false, 'Assigned'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="assigned" data-worked="false">
+                                                <i class="bi bi-person-check text-info me-2"></i>
+                                                Assigned
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'in_progress', true, 'In Progress'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="in_progress" data-worked="true">
+                                                <i class="bi bi-play-circle text-primary me-2"></i>
+                                                In Progress
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'completed', true, 'Work Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="completed" data-worked="true">
+                                                <i class="bi bi-check-circle text-success me-2"></i>
+                                                Work Completed
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'not_worked', false, 'Not Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="not_worked" data-worked="false">
+                                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                                Not Completed
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-modern">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Not Completed Assignments -->
+    {% if completed_not_worked_assignments %}
+    <div class="card-modern mb-4">
+        <div class="card-header-modern bg-danger bg-opacity-10">
+            <h5 class="card-title-modern">
+                <i class="bi bi-x-circle text-danger me-2"></i>
+                Not Completed ({{ completed_not_worked_assignments.count }})
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="row">
+                {% for assignment in completed_not_worked_assignments %}
+                <div class="col-md-6 mb-3">
+                    <div class="border rounded p-3 bg-danger bg-opacity-5">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">{{ assignment.codice_nigit }}</h6>
+                                {% if assignment.intervention %}
+                                <small class="text-info">
+                                    {{ assignment.intervention.international_code|default:"" }}
+                                    {% if assignment.intervention.codice_sito %} | {{ assignment.intervention.codice_sito }}{% endif %}
+                                </small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-danger">
+                            Completed
+                            <i class="bi bi-x-circle ms-1" title="Not Worked"></i>
+                        </span>
+                        </div>
+                        <p class="mb-2"><strong>{{ assignment.client_name|default:"No client" }}</strong></p>
+                        {% if assignment.intervention.tipologia_intervento %}
+                        <p class="mb-2 text-muted small">
+                            <i class="bi bi-tag me-1"></i>{{ assignment.intervention.tipologia_intervento }}
+                        </p>
+                        {% endif %}
+                        <p class="mb-2 text-muted small">{{ assignment.assignment_note|truncatewords:20 }}</p>
+                        {% if assignment.completion_note %}
+                        <div class="alert alert-warning py-2 mb-2">
+                            <small><strong>Reason:</strong> {{ assignment.completion_note|truncatewords:15 }}</small>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-x-circle"></i> {{ assignment.completed_date|date:"d/m/Y H:i" }}
+                                {% if assignment.completed_by %}
+                                    by {{ assignment.completed_by.get_full_name|default:assignment.completed_by.username }}
+                                {% endif %}
+                            </small>
+                            <div class="d-flex gap-2">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear me-1"></i>
+                                        Change Status
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'assigned', false, 'Assigned'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="assigned" data-worked="false">
+                                                <i class="bi bi-person-check text-info me-2"></i>
+                                                Assigned
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'in_progress', true, 'In Progress'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="in_progress" data-worked="true">
+                                                <i class="bi bi-play-circle text-primary me-2"></i>
+                                                In Progress
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'completed', true, 'Work Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="completed" data-worked="true">
+                                                <i class="bi bi-check-circle text-success me-2"></i>
+                                                Work Completed
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item work-status-item" href="#" 
+                                               onclick="updateWorkStatus('{{ assignment.pk }}', 'not_worked', false, 'Not Completed'); return false;"
+                                               data-pk="{{ assignment.pk }}" data-status="not_worked" data-worked="false">
+                                                <i class="bi bi-x-circle text-danger me-2"></i>
+                                                Not Completed
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-modern">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Cancelled Assignments -->
+    {% if cancelled_assignments %}
+    <div class="card-modern mb-4">
+        <div class="card-header-modern bg-danger bg-opacity-10">
+            <h5 class="card-title-modern">
+                <i class="bi bi-x-circle text-danger me-2"></i>
+                Cancelled Assignments ({{ cancelled_assignments.count }})
+            </h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="row">
+                {% for assignment in cancelled_assignments %}
+                <div class="col-md-6 mb-3">
+                    <div class="border rounded p-3 bg-danger bg-opacity-5">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">{{ assignment.codice_nigit }}</h6>
+                                {% if assignment.intervention %}
+                                <small class="text-info">
+                                    {{ assignment.intervention.international_code|default:"" }}
+                                    {% if assignment.intervention.codice_sito %} | {{ assignment.intervention.codice_sito }}{% endif %}
+                                </small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-danger">Cancelled</span>
+                        </div>
+                        {% if assignment.intervention %}
+                        <p class="mb-1 small">{{ assignment.intervention.nome|default:"No name" }}</p>
+                        {% endif %}
+                        <p class="mb-1 small text-muted">Assigned: {{ assignment.assigned_date|date:"d/m/Y H:i" }}</p>
+                        <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-secondary">View Details</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- No Assignments -->
+    {% if not pending_assignments and not active_assignments and not completed_worked_assignments and not completed_not_worked_assignments and not cancelled_assignments %}
+    <div class="text-center py-5">
+        <i class="bi bi-clipboard-check" style="font-size: 4rem; color: #6c757d;"></i>
+        <h5 class="mt-3">No Assignments Yet</h5>
+        <p class="text-muted">You haven't been assigned any work yet. Check back later!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

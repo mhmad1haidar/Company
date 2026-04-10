@@ -1,0 +1,1075 @@
+{% extends "base_modern.html" %}
+{% load static %}
+{% load assignment_tags %}
+{% block title %}Dashboard - Platform{% endblock %}
+{% block extra_css %}
+<style>
+.user-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e0e0e0;
+}
+.user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.stat-badge {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+.assignment-item {
+    border-left: 3px solid #007bff;
+    background: #f8f9fa;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+.assignment-item.pending {
+    border-left-color: #ffc107;
+}
+.assignment-item.in_progress {
+    border-left-color: #17a2b8;
+}
+.assignment-item.completed {
+    border-left-color: #28a745;
+}
+
+/* Enhanced My Assignments Styles */
+.stat-card {
+    transition: all 0.3s ease;
+    background: white;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+.stat-icon {
+    transition: all 0.3s ease;
+}
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+}
+.stat-number {
+    transition: all 0.3s ease;
+}
+.stat-card:hover .stat-number {
+    transform: scale(1.05);
+}
+
+.assignment-card {
+    transition: all 0.3s ease;
+    background: white;
+    border-left: 4px solid #667eea !important;
+}
+.assignment-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    border-left-color: #764ba2 !important;
+}
+.assignment-card.pending {
+    border-left-color: #ffc107 !important;
+}
+.assignment-card.assigned {
+    border-left-color: #17a2b8 !important;
+}
+.assignment-card.in_progress {
+    border-left-color: #0d6efd !important;
+}
+.assignment-card.completed {
+    border-left-color: #28a745 !important;
+}
+
+.hover-lift {
+    transition: all 0.3s ease;
+}
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.empty-state {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-complete {
+    transition: all 0.3s ease;
+}
+.btn-complete:hover {
+    transform: scale(1.05);
+}
+
+.bg-gradient {
+    position: relative;
+    overflow: hidden;
+}
+.bg-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shimmer 3s infinite;
+}
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<!-- Work Status Update JavaScript - ensure it loads first -->
+<script>
+function updateWorkStatus(pk, status, worked, statusText) {
+    console.log('Updating work status:', { pk, status, worked, statusText });
+    
+    // For completion status, show modal for notes
+    if (status === 'completed') {
+        const note = prompt(worked ? 'Enter completion notes (optional):' : 'Enter reason for not working (optional):');
+        if (note === null) return; // User cancelled
+        sendUpdate(pk, status, worked, note || '');
+    } else {
+        // Direct update for non-completion status
+        sendUpdate(pk, status, worked, '');
+    }
+}
+
+function sendUpdate(pk, status, worked, note) {
+    console.log('sendUpdate called with:', { pk, status, worked, note });
+    
+    // Use the complete_assignment view for completed status
+    if (status === 'completed') {
+        const url = `/assignments/assignment/${pk}/complete/`;
+        console.log('Using complete URL:', url);
+        
+        const formData = new FormData();
+        formData.set('completion_note', note);
+        formData.set('work_performed', worked);
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            formData.set('csrfmiddlewaretoken', csrfToken.value);
+        } else {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            if (cookieValue) {
+                formData.set('csrfmiddlewaretoken', cookieValue);
+            }
+        }
+        
+        console.log('Sending to complete view with note:', note);
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert('Status updated successfully: ' + data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while updating the status.');
+        });
+    } else {
+        // For other statuses, use the update_work_status view
+        const url = `/assignments/assignment/${pk}/update-work-status/`;
+        console.log('Using update-work-status URL:', url);
+        
+        const formData = new FormData();
+        formData.set('status', status);
+        formData.set('work_performed', worked);
+        formData.set('completion_note', note);
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            formData.set('csrfmiddlewaretoken', csrfToken.value);
+        } else {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            if (cookieValue) {
+                formData.set('csrfmiddlewaretoken', cookieValue);
+            }
+        }
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert('Status updated successfully: ' + data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while updating the status.');
+        });
+    }
+}
+
+function deleteAssignment(pk, assignmentCode) {
+    console.log('Deleting assignment:', { pk, assignmentCode });
+    
+    if (confirm(`Are you sure you want to delete assignment ${assignmentCode}? This action cannot be undone.`)) {
+        const url = `/assignments/assignment/${pk}/delete/`;
+        console.log('Using delete URL:', url);
+        
+        const formData = new FormData();
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            formData.set('csrfmiddlewaretoken', csrfToken.value);
+        } else {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            if (cookieValue) {
+                formData.set('csrfmiddlewaretoken', cookieValue);
+            }
+        }
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert('Assignment deleted successfully: ' + data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while deleting the assignment.');
+        });
+    }
+}
+</script>
+
+<div class="main-content">
+    <!-- Compact Dashboard Header -->
+    <div class="dashboard-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.8rem; box-shadow: 0 6px 15px rgba(0,0,0,0.06); position: relative; overflow: hidden;">
+        <div class="row align-items-center position-relative" style="z-index: 1;">
+            <div class="col-md-8">
+                <div class="dashboard-title">
+                    <h1 style="margin-bottom: 0.15rem; font-weight: 700; font-size: 1.4rem; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">Dashboard</h1>
+                    <p style="margin-bottom: 0; opacity: 0.9; font-size: 0.75rem; color: white; font-weight: 300;">Real-time insights and performance metrics</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-1 mt-md-0">
+                <div class="dashboard-actions">
+                    <a href="{% url 'attendance:attendance_dashboard' %}" class="btn btn-modern-primary" style="padding: 0.4rem 0.9rem; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px); transition: all 0.3s ease; text-decoration: none; display: inline-block; font-size: 0.75rem;">
+                        <i class="bi bi-clock-history me-1"></i>
+                        Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Business Metrics - My Assignments on Separate Row -->
+    <!-- Row 1: My Assignments (Alone) -->
+    <div class="row mb-2">
+        <div class="col-12">
+            <div class="metric-card" style="background: linear-gradient(135deg, #fef7ff 0%, #faf5ff 100%); border: 1px solid #e9d5ff; border-radius: 12px; padding: 1.2rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <div class="metric-icon" style="width: 56px; height: 56px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);">
+                        <i class="bi bi-person-check" style="font-size: 1.4rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #dbeafe; color: #1e40af; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Personal</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 2.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; line-height: 1;">{{ user_assignments|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 1rem; color: #64748b; font-weight: 500; margin-bottom: 0.75rem;">My Assignments</div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div class="metric-subtitle" style="font-size: 0.85rem; color: #94a3b8; font-weight: 400;">Assigned to Me</div>
+                        <a href="{% url 'assignments:my-assignments' %}" class="action-link" style="color: #3b82f6; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; transition: all 0.3s ease; padding: 0.5rem 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                            View Details
+                            <i class="bi bi-arrow-right ms-1" style="font-size: 0.75rem;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Other Metrics (Together) -->
+    <div class="row mb-2">
+        <!-- Pending Assignments (Superuser Only) -->
+        {% if request.user.is_superuser and pending_assignments >= 1 %}
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
+            <div class="metric-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.15);">
+                        <i class="bi bi-clock" style="font-size: 1rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #fef3c7; color: #92400e; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Pending</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ pending_assignments|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">Pending Assignments</div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">Waiting</div>
+                        <a href="{% url 'assignments:assignment-list' %}?status=pending" class="action-link" style="color: #f59e0b; text-decoration: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; transition: all 0.3s ease;">
+                            View
+                            <i class="bi bi-arrow-right ms-1" style="font-size: 0.6rem;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Assigned Assignments (Superuser Only) -->
+        {% if request.user.is_superuser and assigned_assignments >= 1 %}
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
+            <div class="metric-card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #93c5fd; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(59, 130, 246, 0.15);">
+                        <i class="bi bi-person-check" style="font-size: 1rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #dbeafe; color: #1e40af; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Assigned</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ assigned_assignments|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">Assigned Assignments</div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">To Employees</div>
+                        <a href="{% url 'assignments:assignment-list' %}?status=assigned" class="action-link" style="color: #3b82f6; text-decoration: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; transition: all 0.3s ease;">
+                            View
+                            <i class="bi bi-arrow-right ms-1" style="font-size: 0.6rem;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- In Progress Assignments (Superuser Only) -->
+        {% if request.user.is_superuser and in_progress_assignments >= 1 %}
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
+            <div class="metric-card" style="background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); border: 1px solid #a5b4fc; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(99, 102, 241, 0.15);">
+                        <i class="bi bi-hourglass-split" style="font-size: 1rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #e0e7ff; color: #3730a3; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Working</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ in_progress_assignments|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">In Progress</div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">Active</div>
+                        <a href="{% url 'assignments:assignment-list' %}?status=in_progress" class="action-link" style="color: #6366f1; text-decoration: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; transition: all 0.3s ease;">
+                            View
+                            <i class="bi bi-arrow-right ms-1" style="font-size: 0.6rem;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Total Assignments (Admin Only) -->
+        {% if request.user.is_superuser or request.user.is_staff or request.user.role in 'admin,manager' %}
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
+            <div class="metric-card" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #e9d5ff; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.15);">
+                        <i class="bi bi-list-task" style="font-size: 1rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #ede9fe; color: #7c3aed; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Admin</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ total_assignments|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">Total Assignments</div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">All Work</div>
+                        <div class="btn-group">
+                            <a href="{% url 'assignments:assignment-create' %}" class="btn btn-sm btn-success" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                                <i class="bi bi-plus"></i> New
+                            </a>
+                            <a href="{% url 'assignments:assignment-list' %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                                <i class="bi bi-list"></i> Manage
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if completed_worked_total >= 1 %}
+        <!-- Work Completed (Admin Only) -->
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
+            <div class="metric-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.15);">
+                        <i class="bi bi-check-circle" style="font-size: 1rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #dcfce7; color: #166534; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Done</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ completed_worked_total|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">Work Completed</div>
+                    <div class="metric-progress" style="background: #dcfce7; height: 3px; border-radius: 2px; overflow: hidden;">
+                        <div class="progress-fill" style="background: linear-gradient(90deg, #10b981 0%, #059669 100%); height: 100%; width: 75%; border-radius: 2px;"></div>
+                    </div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
+                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">Actually Worked</div>
+                        <a href="{% url 'assignments:assignment-list' %}?status=completed&worked=true" class="action-link" style="color: #10b981; text-decoration: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; transition: all 0.3s ease;">
+                            View
+                            <i class="bi bi-arrow-right ms-1" style="font-size: 0.6rem;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if completed_not_worked_total >= 1 %}
+        <!-- Not Completed (Admin Only) -->
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
+            <div class="metric-card" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(239, 68, 68, 0.15);">
+                        <i class="bi bi-x-circle" style="font-size: 1rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #fee2e2; color: #dc2626; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Not Done</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ completed_not_worked_total|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">Not Completed</div>
+                    <div class="metric-progress" style="background: #fee2e2; height: 3px; border-radius: 2px; overflow: hidden;">
+                        <div class="progress-fill" style="background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); height: 100%; width: 25%; border-radius: 2px;"></div>
+                    </div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
+                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">Not Worked</div>
+                        <a href="{% url 'assignments:assignment-list' %}?status=not_worked" class="action-link" style="color: #ef4444; text-decoration: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; transition: all 0.3s ease;">
+                            View
+                            <i class="bi bi-arrow-right ms-1" style="font-size: 0.6rem;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+    
+    <!-- Assignment Section - Different views based on permissions -->
+    {% if show_all_users %}
+        <!-- Admin/Manager View - Show all users -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card-modern" style="border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div class="card-header-modern" style="background: #f8fafc; border-radius: 12px 12px 0 0; padding: 1rem; border-bottom: 1px solid #e2e8f0;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title-modern mb-0" style="font-size: 1rem; font-weight: 600; color: #1e293b;">
+                                    <i class="bi bi-people me-2"></i>
+                                    User Assignments Overview
+                                </h5>
+                            </div>
+                            <a href="{% url 'assignments:assignment-create' %}" class="btn btn-sm btn-outline-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                                <i class="bi bi-plus-circle me-1"></i>New Assignment
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body-modern" style="padding: 1rem;">
+                        {% if users_with_assignments %}
+                            <div class="row">
+                                {% for user in users_with_assignments %}
+                                <div class="col-lg-6 col-xl-4 mb-3">
+                                    <div class="card h-100" style="border: 1px solid #e2e8f0; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                        <div class="card-body p-0">
+                                            <!-- User Header -->
+                                            <div class="p-3 border-bottom" style="background: #ffffff;">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle text-white d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px; background: #64748b; font-size: 0.9rem; font-weight: 600;">
+                                                        {{ user.get_full_name|default:user.username|slice:":2"|upper }}
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-0 fw-bold" style="font-size: 0.9rem; color: #1e293b;">{{ user.get_full_name|default:user.username }}</h6>
+                                                        <small class="text-muted" style="font-size: 0.75rem;">{{ user.email|default:"No email" }}</small>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <div class="badge rounded-pill" style="background: #f1f5f9; color: #475569; padding: 0.3rem 0.6rem; font-size: 0.7rem; font-weight: 600;">
+                                                            {{ user.assignment_count }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Statistics Grid -->
+                                            <div class="p-3">
+                                                <div class="row g-2">
+                                                    <div class="col-3">
+                                                        <div class="text-center p-2 rounded" style="background: #fef3c7; border: 1px solid #fde68a;">
+                                                            <div class="fw-bold" style="font-size: 1.1rem; color: #92400e;">{{ user.pending_count }}</div>
+                                                            <small class="d-block" style="font-size: 0.65rem; color: #92400e; font-weight: 600;">Pending</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <div class="text-center p-2 rounded" style="background: #dbeafe; border: 1px solid #bfdbfe;">
+                                                            <div class="fw-bold" style="font-size: 1.1rem; color: #1e40af;">{{ user.in_progress_count }}</div>
+                                                            <small class="d-block" style="font-size: 0.65rem; color: #1e40af; font-weight: 600;">In Progress</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <div class="text-center p-2 rounded" style="background: #d1fae5; border: 1px solid #a7f3d0;">
+                                                            <div class="fw-bold" style="font-size: 1.1rem; color: #065f46;">{{ user.completed_worked_count }}</div>
+                                                            <small class="d-block" style="font-size: 0.65rem; color: #065f46; font-weight: 600;">Worked</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <div class="text-center p-2 rounded" style="background: #fee2e2; border: 1px solid #fecaca;">
+                                                            <div class="fw-bold" style="font-size: 1.1rem; color: #991b1b;">{{ user.completed_not_worked_count }}</div>
+                                                            <small class="d-block" style="font-size: 0.65rem; color: #991b1b; font-weight: 600;">Not Worked</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Recent Assignments -->
+                                                <div class="mt-3">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <h6 class="mb-0 fw-bold" style="font-size: 0.8rem; color: #475569;">
+                                                            <i class="bi bi-clock-history me-1"></i>Recent
+                                                        </h6>
+                                                        <small class="text-muted" style="font-size: 0.7rem;">Last 5</small>
+                                                    </div>
+                                                    <div class="assignments-list" style="max-height: 140px; overflow-y: auto; padding-right: 4px;">
+                                                        {% for assignment in user_assignments_dict|dict_value:user.id %}
+                                                        <div class="assignment-item p-2 mb-2 rounded" style="background: #f8fafc; border-left: 3px solid #64748b; transition: all 0.2s ease;">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div class="flex-grow-1">
+                                                                    <div class="fw-bold mb-0" style="font-size: 0.8rem; color: #1e293b;">{{ assignment.codice_nigit }}</div>
+                                                                    <small class="text-muted" style="font-size: 0.7rem;">
+                                                                        {% if assignment.intervention.codice_sito %}{{ assignment.intervention.codice_sito }} - {% endif %}{{ assignment.intervention_name|truncatechars:25 }}
+                                                                    </small>
+                                                                </div>
+                                                                <div class="text-end ms-2">
+                                                                    <span class="badge rounded-pill mb-0" style="font-size: 0.65rem; padding: 0.25rem 0.5rem; background: {% if assignment.status == 'pending' %}#fbbf24{% elif assignment.status == 'assigned' %}#3b82f6{% elif assignment.status == 'in_progress' %}#6366f1{% elif assignment.status == 'completed' %}#10b981{% elif assignment.status == 'not_worked' %}#ef4444{% else %}#9ca3af{% endif %}; color: white;">
+                                                                        {{ assignment.get_status_display }}
+                                                                    </span>
+                                                                    <div class="text-muted" style="font-size: 0.65rem;">{{ assignment.assigned_date|date:"d/m" }}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% empty %}
+                                                        <div class="text-center text-muted py-2" style="background: #f8fafc; border-radius: 6px;">
+                                                            <i class="bi bi-inbox" style="font-size: 1.5rem; color: #cbd5e1;"></i>
+                                                            <div class="mt-1" style="font-size: 0.75rem;">No assignments</div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="bi bi-people text-muted" style="font-size: 2rem; color: #cbd5e1;"></i>
+                                <h5 class="mt-2 text-muted" style="font-size: 0.95rem;">No Users with Assignments</h5>
+                                <p class="text-muted" style="font-size: 0.85rem;">Create an assignment to start tracking work.</p>
+                                <a href="{% url 'assignments:assignment-create' %}" class="btn btn-primary-modern btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Create Assignment
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Regular User View - Show only their assignments -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card-modern">
+                <div class="card-header-modern bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="card-title-modern text-white">
+                        <i class="bi bi-person-check me-2"></i>
+                        My Assignments
+                    </h5>
+                    <div class="card-actions">
+                        <a href="{% url 'assignments:my-assignments' %}" class="btn btn-sm btn-light">
+                            <i class="bi bi-list-ul me-1"></i>
+                            View All My Assignments
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body-modern">
+                    {% if recent_assignments %}
+                        <!-- Enhanced Statistics -->
+                        <div class="row mb-4">
+                            {% if user_pending >= 1 %}
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="stat-card text-center p-3 border rounded-3 shadow-sm hover-lift">
+                                    <div class="stat-icon-wrapper mb-2">
+                                        <div class="stat-icon bg-warning bg-opacity-10 text-warning rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-clock-history fs-3"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-number fw-bold fs-3 text-warning">{{ user_pending }}</div>
+                                    <div class="stat-label text-muted small">Pending</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if user_assigned >= 1 %}
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="stat-card text-center p-3 border rounded-3 shadow-sm hover-lift">
+                                    <div class="stat-icon-wrapper mb-2">
+                                        <div class="stat-icon bg-info bg-opacity-10 text-info rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-person-check fs-3"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-number fw-bold fs-3 text-info">{{ user_assigned }}</div>
+                                    <div class="stat-label text-muted small">Assigned</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if user_in_progress >= 1 %}
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="stat-card text-center p-3 border rounded-3 shadow-sm hover-lift">
+                                    <div class="stat-icon-wrapper mb-2">
+                                        <div class="stat-icon bg-primary bg-opacity-10 text-primary rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-play-circle fs-3"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-number fw-bold fs-3 text-primary">{{ user_in_progress }}</div>
+                                    <div class="stat-label text-muted small">In Progress</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if user_completed_worked >= 1 %}
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="stat-card text-center p-3 border rounded-3 shadow-sm hover-lift">
+                                    <div class="stat-icon-wrapper mb-2">
+                                        <div class="stat-icon bg-success bg-opacity-10 text-success rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-check-circle fs-3"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-number fw-bold fs-3 text-success">{{ user_completed_worked }}</div>
+                                    <div class="stat-label text-muted small">Work Completed</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if user_completed_not_worked >= 1 %}
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="stat-card text-center p-3 border rounded-3 shadow-sm hover-lift">
+                                    <div class="stat-icon-wrapper mb-2">
+                                        <div class="stat-icon bg-danger bg-opacity-10 text-danger rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-x-circle fs-3"></i>
+                                        </div>
+                                    </div>
+                                    <div class="stat-number fw-bold fs-3 text-danger">{{ user_completed_not_worked }}</div>
+                                    <div class="stat-label text-muted small">Not Completed</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notification Widget -->
+                        <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="bi bi-bell me-2 text-primary"></i>
+                                Recent Notifications
+                            </h6>
+                            <span class="badge bg-primary bg-opacity-10 text-primary">{{ unread_notifications }} unread</span>
+                        </div>
+                        
+                        {% if recent_notifications %}
+                        <div class="notifications-list mb-4">
+                            {% for notification in recent_notifications %}
+                            <div class="notification-item border rounded-3 p-3 mb-2 shadow-sm {% if not notification.is_read %}bg-light{% endif %}" style="border-left: 4px solid {% if not notification.is_read %}#4f46e5{% else %}#e2e8f0{% endif %};">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold mb-1">{{ notification.title }}</div>
+                                        <div class="text-muted small mb-1">{{ notification.message }}</div>
+                                        <div class="text-muted small" style="font-size: 11px;">{{ notification.created_at|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    {% if notification.link %}
+                                    <a href="{{ notification.link }}" class="btn btn-sm btn-outline-modern ms-2">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-3 mb-4">
+                            <i class="bi bi-bell-slash fs-4 mb-2 d-block"></i>
+                            <small>No notifications</small>
+                        </div>
+                        {% endif %}
+
+                        <!-- Enhanced Recent Assignments -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="bi bi-clock-history me-2 text-primary"></i>
+                                My Recent Assignments
+                            </h6>
+                            <span class="badge bg-primary bg-opacity-10 text-primary">{{ recent_assignments|length }} active</span>
+                        </div>
+                        
+                        <div class="assignments-grid">
+                            {% for assignment in recent_assignments %}
+                            <div class="assignment-card border rounded-3 p-3 mb-3 shadow-sm hover-lift">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <h6 class="mb-0 me-2">{{ assignment.codice_nigit }}</h6>
+                                            <span class="badge bg-{{ assignment.status|status_color }} bg-opacity-10 text-{{ assignment.status|status_color }}">
+                                                {{ assignment.get_status_display }}
+                                                {% if assignment.status == 'completed' %}
+                                                    {% if assignment.work_performed %}
+                                                        <i class="bi bi-check-circle ms-1" title="Work Performed"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-x-circle ms-1" title="Not Worked"></i>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        {% if assignment.intervention %}
+                                        <small class="text-info">
+                                            <i class="bi bi-tag me-1"></i>
+                                            {{ assignment.intervention.international_code|default:"" }}
+                                            {% if assignment.intervention.codice_sito %} | {{ assignment.intervention.codice_sito }}{% endif %}
+                                        </small>
+                                        {% endif %}
+                                        <p class="mb-1 mt-2 text-muted small">{{ assignment.intervention_name|truncatechars:50 }}</p>
+                                        {% if assignment.intervention.tipologia_intervento %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-gear me-1"></i>{{ assignment.intervention.tipologia_intervento }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ms-3">
+                                        <div class="btn-group">
+                                            <a href="{{ assignment.get_directions_url }}" target="_blank" class="btn btn-sm btn-success rounded-circle" style="width: 35px; height: 35px; padding: 0; display: flex; align-items: center; justify-content: center;" title="Get Directions">
+                                                <i class="bi bi-geo-alt"></i>
+                                            </a>
+                                            <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-primary rounded-circle" style="width: 35px; height: 35px; padding: 0; display: flex; align-items: center; justify-content: center;" title="View Details">
+                                                <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        {{ assignment.assigned_date|date:"d/m/Y H:i" }}
+                                    </small>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-gear me-1"></i>
+                                            Work Status
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item work-status-item" href="#" 
+                                                   onclick="updateWorkStatus('{{ assignment.pk }}', 'completed', true, 'Work Completed'); return false;"
+                                                   data-pk="{{ assignment.pk }}" data-status="completed" data-worked="true">
+                                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                                    Work Completed
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item work-status-item" href="#" 
+                                                   onclick="updateWorkStatus('{{ assignment.pk }}', 'completed', false, 'Not Worked'); return false;"
+                                                   data-pk="{{ assignment.pk }}" data-status="completed" data-worked="false">
+                                                    <i class="bi bi-x-circle text-danger me-2"></i>
+                                                    Not Worked
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item work-status-item" href="#" 
+                                                   onclick="updateWorkStatus('{{ assignment.pk }}', 'in_progress', true, 'In Progress'); return false;"
+                                                   data-pk="{{ assignment.pk }}" data-status="in_progress" data-worked="true">
+                                                    <i class="bi bi-play-circle text-primary me-2"></i>
+                                                    In Progress
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item work-status-item" href="#" 
+                                                   onclick="updateWorkStatus('{{ assignment.pk }}', 'assigned', false, 'Assigned'); return false;"
+                                                   data-pk="{{ assignment.pk }}" data-status="assigned" data-worked="false">
+                                                    <i class="bi bi-person-check text-info me-2"></i>
+                                                    Assigned
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-icon bg-light rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px;">
+                                    <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+                                </div>
+                                <h4 class="text-muted">No Assignments Yet</h4>
+                                <p class="text-muted">You haven't been assigned any work yet. Check back later!</p>
+                                <div class="mt-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Recent Assignments Section (only for admin view) -->
+    {% if show_all_users %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Recent Work Assignments
+                    </h5>
+                    <div class="card-actions">
+                        <a href="{% url 'assignments:assignment-list' %}" class="btn btn-sm btn-outline-primary">
+                            View All
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body-modern">
+                    {% if recent_assignments %}
+                        <div class="table-responsive">
+                            <table class="table table-modern table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Assigned To</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for assignment in recent_assignments %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ assignment.codice_nigit }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ assignment.intervention_name|truncatechars:30 }}</small>
+                                        </td>
+                                        <td>
+                                            {% for user in assignment.assigned_to.all %}
+                                                {{ user.get_full_name|default:user.username }}{% if not forloop.last %}, {% endif %}
+                                            {% empty %}
+                                                <span class="text-muted">No employees assigned</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% with status_colors="pending:warning,assigned:info,in_progress:primary,completed:success,cancelled:danger" %}
+                                                {% for status_color in status_colors.split %}
+                                                    {% with status_pair=status_color.split %}
+                                                        {% if assignment.status == status_pair.0 %}
+                                                            <span class="badge bg-{{ status_pair.1 }}">
+                                                                {{ assignment.get_status_display }}
+                                                                {% if assignment.status == 'completed' %}
+                                                                    {% if assignment.work_performed %}
+                                                                        <i class="bi bi-check-circle ms-1" title="Work Performed"></i>
+                                                                    {% else %}
+                                                                        <i class="bi bi-x-circle ms-1" title="Not Worked"></i>
+                                                                    {% endif %}
+                                                                {% endif %}
+                                                            </span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                {% endfor %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ assignment.assigned_date|date:"d/m/Y H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2">No work assignments found.</p>
+                            <a href="{% url 'assignments:assignment-create' %}" class="btn btn-primary-modern">
+                                <i class="bi bi-plus-circle me-2"></i>Create First Assignment
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Modern Metric Cards Styles */
+.metric-card {
+    transform: translateY(0);
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.08);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.metric-icon {
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover .metric-icon {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.metric-value {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover .metric-value {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.metric-badge {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+}
+
+.progress-fill {
+    animation: progressGrow 2s ease-out;
+}
+
+@keyframes progressGrow {
+    0% { width: 0%; }
+    100% { width: 100%; }
+}
+
+.action-link {
+    position: relative;
+    overflow: hidden;
+}
+
+.action-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.action-link:hover::before {
+    left: 100%;
+}
+
+.action-link:hover {
+    transform: translateX(2px);
+}
+
+/* Smooth transitions */
+.metric-card,
+.metric-icon,
+.metric-value,
+.metric-badge,
+.action-link {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .metric-card {
+        padding: 1rem;
+    }
+    
+    .metric-value {
+        font-size: 1.8rem;
+    }
+    
+    .metric-title {
+        font-size: 0.75rem;
+    }
+}
+</style>
+
+{% endblock %}

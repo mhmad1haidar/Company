@@ -1,0 +1,293 @@
+{% extends "base_modern.html" %}
+{% block title %}Leave Management - Business Platform{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col">
+      <h1 class="h3 mb-1">Leave Management</h1>
+      <p class="text-muted">Review and manage all employee leave requests.</p>
+    </div>
+    <div class="col-auto">
+      {% if pending_count %}
+      <span class="badge bg-danger fs-6">{{ pending_count }} Pending</span>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+          {{ filter_form.user }}
+        </div>
+        <div class="col-md-2">
+          {{ filter_form.status }}
+        </div>
+        <div class="col-md-2">
+          {{ filter_form.leave_type }}
+        </div>
+        <div class="col-md-2">
+          {{ filter_form.start_date_from }}
+        </div>
+        <div class="col-md-2">
+          {{ filter_form.start_date_to }}
+        </div>
+        <div class="col-md-1">
+          <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
+        <div class="col-md-auto">
+          <a href="?page=1" class="btn btn-outline-secondary">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Leave Requests -->
+  {% if leaves %}
+  <div class="card">
+    <div class="card-header">
+      <h5 class="card-title mb-0">Leave Requests</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Leave Type</th>
+              <th>Duration</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Applied On</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for leave in leaves %}
+            <tr id="leave-row-{{ leave.id }}">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="user-avatar me-2" style="width: 32px; height: 32px; font-size: 12px;">
+                    {{ leave.user.get_username|first|upper }}
+                  </div>
+                  <div>
+                    <div class="fw-semibold">{{ leave.user.get_full_name|default:leave.user.get_username }}</div>
+                    <div class="text-muted small">{{ leave.user.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-info">{{ leave.leave_type.name }}</span>
+              </td>
+              <td>
+                <div>{{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"M d, Y" }}</div>
+                <div class="text-muted small">{{ leave.days_count }} days</div>
+              </td>
+              <td>
+                <div class="text-truncate" style="max-width: 200px;" title="{{ leave.reason }}">
+                  {{ leave.reason|truncatechars:50 }}
+                </div>
+              </td>
+              <td>
+                <span id="status-badge-{{ leave.id }}" class="badge bg-{{ leave.status_color }}">
+                  {{ leave.get_status_display }}
+                </span>
+              </td>
+              <td>
+                <div class="text-muted small">{{ leave.created_at|date:"M d, Y" }}</div>
+              </td>
+              <td>
+                <div class="btn-group" role="group">
+                  <a href="{% url 'leave:leave_admin_detail' leave.id %}" class="btn btn-sm" title="View Details" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; color: white; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);">
+                    <i class="bi bi-eye"></i> View
+                  </a>
+                  {% if leave.status == 'pending' %}
+                  <form method="post" action="{% url 'leave:leave_approve_action' leave.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);">
+                      <i class="bi bi-check-lg"></i> Approve
+                    </button>
+                  </form>
+                  <form method="post" action="{% url 'leave:leave_reject_action' leave.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; color: white; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);">
+                      <i class="bi bi-x-lg"></i> Reject
+                    </button>
+                  </form>
+                  {% else %}
+                  <span class="text-muted small">
+                    {% if leave.approved_by %}
+                      by {{ leave.approved_by.get_full_name|default:leave.approved_by.get_username }}
+                    {% endif %}
+                  </span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination -->
+      {% if is_paginated %}
+      <nav aria-label="Leave requests pagination">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+          </li>
+          {% endif %}
+          
+          {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+          </li>
+          {% else %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          </li>
+          {% endif %}
+          {% endfor %}
+          
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+      <h5 class="text-muted mt-3">No leave requests found</h5>
+      <p class="text-muted">Try adjusting the filters or check back later.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function approveLeave(leaveId) {
+  updateLeaveStatus(leaveId, 'approved');
+}
+
+function rejectLeave(leaveId) {
+  updateLeaveStatus(leaveId, 'rejected');
+}
+
+function updateLeaveStatus(leaveId, status) {
+  // Get CSRF token
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  
+  // Show loading state
+  const actionButtons = document.getElementById(`action-buttons-${leaveId}`);
+  const statusBadge = document.getElementById(`status-badge-${leaveId}`);
+  
+  // Disable buttons and show loading
+  actionButtons.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Processing...';
+  
+  // Send AJAX request
+  fetch(`/leave/admin/${leaveId}/${status === 'approved' ? 'approve-action' : 'reject-action'}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': csrfToken,
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: `status=${status}`
+  })
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    } else {
+      throw new Error('Network response was not ok');
+    }
+  })
+  .then(data => {
+    // Update status badge
+    statusBadge.className = `badge bg-${data.status_color}`;
+    statusBadge.textContent = data.status_display;
+    
+    // Replace action buttons with approved/rejected info
+    actionButtons.innerHTML = `
+      <div class="text-muted small">
+        by ${data.approved_by}
+      </div>
+    `;
+    
+    // Show success message
+    showNotification(`Leave request ${status} successfully!`, 'success');
+    
+    // Update pending count if needed
+    updatePendingCount();
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Restore buttons
+    actionButtons.innerHTML = `
+      <button type="button" class="btn btn-success btn-sm" onclick="approveLeave(${leaveId})">
+        <i class="bi bi-check-lg"></i> Approve
+      </button>
+      <button type="button" class="btn btn-danger btn-sm" onclick="rejectLeave(${leaveId})">
+        <i class="bi bi-x-lg"></i> Reject
+      </button>
+    `;
+    showNotification('Error updating leave request. Please try again.', 'danger');
+  });
+}
+
+function showNotification(message, type) {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+  notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+  notification.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  // Add to page
+  document.body.appendChild(notification);
+  
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
+}
+
+function updatePendingCount() {
+  // Update pending count badge if it exists
+  const pendingBadge = document.querySelector('.badge.bg-danger');
+  if (pendingBadge) {
+    // Simple count update without API call for now
+    const currentCount = parseInt(pendingBadge.textContent);
+    if (currentCount > 1) {
+      pendingBadge.textContent = `${currentCount - 1} Pending`;
+    } else {
+      pendingBadge.style.display = 'none';
+    }
+  }
+}
+
+// Get CSRF token for AJAX requests
+document.addEventListener('DOMContentLoaded', function() {
+  // Add CSRF token to page if not present
+  if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+    const csrfToken = document.createElement('input');
+    csrfToken.type = 'hidden';
+    csrfToken.name = 'csrfmiddlewaretoken';
+    csrfToken.value = '{{ csrf_token }}';
+    document.body.appendChild(csrfToken);
+  }
+});
+</script>
+{% endblock %}

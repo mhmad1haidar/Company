@@ -1,0 +1,883 @@
+{% extends "base_modern.html" %}
+{% block title %}Attendance - Platform{% endblock %}
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Attendance</h1>
+            <p>Manage employee attendance, check-ins, and timesheets</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'attendance:attendance_timesheet' %}" class="btn btn-outline-modern">
+                <i class="bi bi-download me-2"></i>
+                Download Timesheet
+            </a>
+            <a href="{% url 'attendance:attendance_calendar_export' %}" class="btn btn-outline-modern">
+                <i class="bi bi-calendar-export me-2"></i>
+                Export Calendar
+            </a>
+            <a href="http://127.0.0.1:8001/leave/request/" class="btn btn-primary-modern">
+                <i class="bi bi-calendar-plus me-2"></i>
+                Leave Request
+            </a>
+            <button type="button" class="btn btn-outline-modern" data-bs-toggle="modal" data-bs-target="#workCalendarModal">
+                <i class="bi bi-calendar-week me-2"></i>
+                Work Calendar
+            </button>
+        </div>
+    </div>
+
+    <!-- Attendance Stats Row (Admin Only) -->
+    {% if request.user.is_superuser or request.user.is_staff or request.user.role in 'admin,manager' %}
+    <div class="row">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-check-circle me-2 text-success"></i>
+                        Present Today
+                    </h5>
+                </div>
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="stat-value">{{ present_count }}</div>
+                    <div class="stat-label">Employees Present</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-clock me-2 text-warning"></i>
+                        Late Today
+                    </h5>
+                </div>
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon warning">
+                        <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="stat-value">{{ late_count }}</div>
+                    <div class="stat-label">Late Arrivals</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-x-circle me-2 text-danger"></i>
+                        Absent Today
+                    </h5>
+                </div>
+                <div class="card-body-modern text-center">
+                    <div class="stat-icon danger">
+                        <i class="bi bi-x-circle"></i>
+                    </div>
+                    <div class="stat-value">{{ absent_count }}</div>
+                    <div class="stat-label">Not Present</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="row">
+        <div class="col-12 mb-3">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-lightning me-2 text-primary"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="d-flex gap-3 flex-wrap align-items-center">
+                        {% if not has_active_check_in %}
+                            <form method="post" action="{% url 'attendance:attendance_check_in' %}" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 700; border-radius: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="bi bi-door-open me-2" style="font-size: 1.3rem;"></i>
+                                    Check In
+                                </button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'attendance:attendance_check_out' %}" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 700; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="bi bi-door-closed me-2" style="font-size: 1.3rem;"></i>
+                                    Check Out
+                                </button>
+                            </form>
+                        {% endif %}
+                        
+                        <a href="{% url 'leave:leave_list' %}" class="btn btn-outline-modern">
+                            <i class="bi bi-calendar3 me-2"></i>
+                            View Leave
+                        </a>
+
+                        <button type="button" class="btn btn-outline-modern" data-bs-toggle="modal" data-bs-target="#workCalendarModal">
+                            <i class="bi bi-calendar-week me-2"></i>
+                            Work Calendar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Performance -->
+    {% if today_attendance %}
+    <div class="row">
+        <div class="col-12 mb-3">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-person-check me-2 text-primary"></i>
+                        Today's Performance
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="stat-icon primary me-3" style="width: 32px; height: 32px; margin-bottom: 0; font-size: 16px;">
+                            {% if today_attendance.check_out %}
+                                <i class="bi bi-check-circle-fill text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-check-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="fw-medium">
+                                {% if today_attendance.check_out %}
+                                    Checked Out
+                                {% else %}
+                                    Currently Checked In
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small">
+                                In: {{ today_attendance.check_in|date:"H:i" }}
+                                {% if today_attendance.check_out %}
+                                    • Out: {{ today_attendance.check_out|date:"H:i" }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress -->
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <div class="fw-medium small">Daily Progress</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">
+                                    {% if today_attendance.total_hours is not None %}
+                                        {{ today_attendance.total_hours|floatformat:1 }}
+                                    {% else %}
+                                        0.0
+                                    {% endif %}
+                                    <span class="text-muted fw-normal">/8.0h</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="progress" style="height: 8px; background: var(--bg-secondary);">
+                            <div class="progress-bar" role="progressbar" 
+                                 id="daily-progress-bar"
+                                 data-hours="{% if today_attendance.total_hours is not None %}{{ today_attendance.total_hours }}{% else %}0{% endif %}"
+                                 style="background: var(--primary);"
+                                 aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Attendance Table -->
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern">
+                <i class="bi bi-table me-2 text-info"></i>
+                Daily Attendance Records
+            </h5>
+        </div>
+        <div class="card-body-modern p-0">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attendance in recent_attendance %}
+                        <tr>
+                            <td>
+                                <div class="fw-medium">{{ attendance.date|date:"M d, Y" }}</div>
+                                <div class="text-muted small">{{ attendance.date|date:"l" }}</div>
+                            </td>
+                            <td>
+                                {% if attendance.status == 'present' %}
+                                    <span class="badge badge-modern badge-success-modern">
+                                        <i class="bi bi-check-circle me-1"></i>Present
+                                    </span>
+                                {% elif attendance.status == 'late' %}
+                                    <span class="badge badge-modern badge-warning-modern">
+                                        <i class="bi bi-clock me-1"></i>Late
+                                    </span>
+                                {% elif attendance.status == 'absent' %}
+                                    <span class="badge badge-modern badge-danger-modern">
+                                        <i class="bi bi-x-circle me-1"></i>Absent
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-modern badge-primary-modern">
+                                        {{ attendance.get_status_display }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if attendance.check_in %}
+                                    <div class="fw-medium">{{ attendance.check_in|date:"H:i" }}</div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if attendance.check_out %}
+                                    <div class="fw-medium">{{ attendance.check_out|date:"H:i" }}</div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if attendance.total_hours %}
+                                    <div class="fw-medium">{{ attendance.total_hours|floatformat:1 }}h</div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <div class="empty-state" style="padding: 2rem;">
+                                    <i class="bi bi-clock-history"></i>
+                                    <h5 class="empty-state-title">No Attendance Records</h5>
+                                    <p class="empty-state-text">Your attendance records will appear here once you start tracking.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Work Calendar Modal -->
+<div class="modal fade" id="workCalendarModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-calendar-week me-2"></i>
+                    Work Calendar
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="calendarContainer">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="calendarYear" class="form-label">Year</label>
+                        <select class="form-control-modern" id="calendarYear">
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="calendar-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="fw-medium">Work Schedule Summary</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary text-white">
+                                <span id="workDaysCount">0</span> Work Days
+                            </span>
+                            <span class="badge bg-success text-white ms-2">
+                                <span id="totalHours">0</span> Hours
+                            </span>
+                            <span class="badge bg-warning text-white ms-2">
+                                <span id="leaveDays">0</span> Leave Days
+                            </span>
+                        </div>
+                    </div>
+                    <div id="calendarGrid" class="calendar-grid">
+                        <!-- Calendar will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary-modern" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary-modern" onclick="exportCalendar()">
+                    <i class="bi bi-download me-2"></i>
+                    Export Calendar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Timesheet Modal -->
+<div class="modal fade" id="timesheetModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-download me-2"></i>
+                    Download Timesheet
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="timesheetMonth" class="form-label">Month</label>
+                        <select class="form-control-modern" id="timesheetMonth">
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="timesheetYear" class="form-label">Year</label>
+                        <select class="form-control-modern" id="timesheetYear">
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="timesheetFormat" class="form-label">Format</label>
+                        <select class="form-control-modern" id="timesheetFormat">
+                            <option value="excel" selected>Excel Spreadsheet</option>
+                            <option value="csv">CSV File</option>
+                            <option value="pdf">PDF Document</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="timesheetEmployee" class="form-label">Employee</label>
+                        <select class="form-control-modern" id="timesheetEmployee">
+                            <option value="all">All Employees</option>
+                            <option value="{{ request.user.id }}">My Timesheet Only</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="timesheet-preview">
+                    <div class="table-responsive">
+                        <table class="table table-modern table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Date</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Hours</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        <i class="bi bi-hourglass-split me-2"></i>
+                                        Preview will appear after download
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary-modern" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary-modern" onclick="generateTimesheet()">
+                    <i class="bi bi-download me-2"></i>
+                    Download Timesheet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const progressBar = document.getElementById('daily-progress-bar');
+    if (progressBar && progressBar.dataset.hours) {
+        const hours = parseFloat(progressBar.dataset.hours);
+        const progress = Math.min((hours / 8) * 100, 100);
+        progressBar.style.width = progress + '%';
+        progressBar.setAttribute('aria-valuenow', Math.round(progress));
+    }
+});
+
+function showCalendarModal() {
+    // Set current month and year
+    const now = new Date();
+    document.getElementById('calendarMonth').value = now.getMonth() + 1;
+    document.getElementById('calendarYear').value = now.getFullYear();
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('calendarModal'));
+    modal.show();
+    
+    // Generate calendar
+    generateCalendar();
+}
+
+function showTimesheetModal() {
+    // Set current month and year
+    const now = new Date();
+    document.getElementById('timesheetMonth').value = now.getMonth() + 1;
+    document.getElementById('timesheetYear').value = now.getFullYear();
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('timesheetModal'));
+    modal.show();
+}
+
+function generateCalendar() {
+    const month = parseInt(document.getElementById('calendarMonth').value);
+    const year = parseInt(document.getElementById('calendarYear').value);
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    // Fetch real attendance data for this month
+    fetch(`/attendance/calendar-data/?month=${month}&year=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error loading calendar data:', data.error);
+                // Fallback to empty calendar
+                renderEmptyCalendar(firstDay, daysInMonth, month, year);
+            } else {
+                renderCalendarWithData(data.calendar_data, firstDay, daysInMonth, month, year);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Fallback to empty calendar
+            renderEmptyCalendar(firstDay, daysInMonth, month, year);
+        });
+}
+
+function renderEmptyCalendar(firstDay, daysInMonth, month, year) {
+    let calendarHTML = '<div class="calendar-weekdays">';
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    weekdays.forEach(day => {
+        calendarHTML += `<div class="calendar-weekday">${day}</div>`;
+    });
+    calendarHTML += '</div><div class="calendar-days">';
+    
+    // Empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+        calendarHTML += '<div class="calendar-day empty"></div>';
+    }
+    
+    // Days of the month (empty state)
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month - 1, day);
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+        const isToday = date.toDateString() === new Date().toDateString();
+        
+        let className = 'calendar-day';
+        if (isWeekend) className += ' weekend';
+        if (isToday) className += ' today';
+        
+        calendarHTML += `
+            <div class="${className}">
+                <div class="calendar-date">${day}</div>
+                <div class="calendar-status">
+                    ${isWeekend ? '<i class="bi bi-x-circle text-muted"></i>' : '<i class="bi bi-dash text-muted"></i>'}
+                </div>
+            </div>
+        `;
+    }
+    
+    calendarHTML += '</div>';
+    document.getElementById('calendarGrid').innerHTML = calendarHTML;
+}
+
+function renderCalendarWithData(calendarData, firstDay, daysInMonth, month, year) {
+    let calendarHTML = '<div class="calendar-weekdays">';
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    weekdays.forEach(day => {
+        calendarHTML += `<div class="calendar-weekday">${day}</div>`;
+    });
+    calendarHTML += '</div><div class="calendar-days">';
+    
+    // Empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+        calendarHTML += '<div class="calendar-day empty"></div>';
+    }
+    
+    // Days of the month with real data
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month - 1, day);
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+        const isToday = date.toDateString() === new Date().toDateString();
+        
+        // Find attendance data for this day
+        const dayData = calendarData.find(d => d.day === day);
+        
+        let className = 'calendar-day';
+        if (isWeekend) className += ' weekend';
+        if (isToday) className += ' today';
+        
+        let statusHTML = '';
+        let tooltipText = '';
+        
+        if (isWeekend) {
+            statusHTML = '<i class="bi bi-x-circle text-muted"></i>';
+            tooltipText = 'Weekend';
+        } else if (dayData) {
+            const presentCount = dayData.present_count;
+            const totalCount = dayData.total_employees;
+            const percentage = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+            
+            if (percentage === 0) {
+                statusHTML = '<i class="bi bi-x-circle text-danger"></i>';
+                tooltipText = `No one present (0/${totalCount})`;
+            } else if (percentage < 50) {
+                statusHTML = '<i class="bi bi-exclamation-triangle text-warning"></i>';
+                tooltipText = `Low attendance (${presentCount}/${totalCount} - ${percentage}%)`;
+            } else if (percentage < 80) {
+                statusHTML = '<i class="bi bi-check-circle text-warning"></i>';
+                tooltipText = `Partial attendance (${presentCount}/${totalCount} - ${percentage}%)`;
+            } else {
+                statusHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                tooltipText = `Good attendance (${presentCount}/${totalCount} - ${percentage}%)`;
+            }
+        } else {
+            statusHTML = '<i class="bi bi-dash text-muted"></i>';
+            tooltipText = 'No data available';
+        }
+        
+        calendarHTML += `
+            <div class="${className}" title="${tooltipText}">
+                <div class="calendar-date">${day}</div>
+                <div class="calendar-status">
+                    ${statusHTML}
+                    ${dayData && !isWeekend ? `<div class="attendance-count">${dayData.present_count}/${dayData.total_employees}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    calendarHTML += '</div>';
+    document.getElementById('calendarGrid').innerHTML = calendarHTML;
+    
+    // Update summary statistics
+    updateCalendarSummary(calendarData);
+}
+
+function updateCalendarSummary(calendarData) {
+    if (!calendarData || calendarData.length === 0) {
+        document.getElementById('workDaysCount').textContent = '0';
+        document.getElementById('totalHours').textContent = '0';
+        document.getElementById('leaveDays').textContent = '0';
+        document.getElementById('avgHours').textContent = '0.0';
+        return;
+    }
+    
+    // Calculate real statistics
+    let totalPresent = 0;
+    let totalEmployees = 0;
+    let workDays = 0;
+    
+    calendarData.forEach(day => {
+        if (!day.is_weekend) {
+            workDays++;
+            totalPresent += day.present_count;
+            totalEmployees = Math.max(totalEmployees, day.total_employees);
+        }
+    });
+    
+    const avgAttendance = workDays > 0 ? totalPresent / workDays : 0;
+    const totalHours = avgAttendance * 8; // Assuming 8-hour workday
+    const leaveDays = workDays - Math.round(avgAttendance);
+    const avgHours = workDays > 0 ? (totalHours / workDays) : 0;
+    
+    // Update the display
+    document.getElementById('workDaysCount').textContent = workDays;
+    document.getElementById('totalHours').textContent = Math.round(totalHours);
+    document.getElementById('leaveDays').textContent = leaveDays;
+    document.getElementById('avgHours').textContent = avgHours.toFixed(1);
+}
+
+function generateTimesheet() {
+    const month = document.getElementById('timesheetMonth').value;
+    const year = document.getElementById('timesheetYear').value;
+    const format = document.getElementById('timesheetFormat').value;
+    const employee = document.getElementById('timesheetEmployee').value;
+    
+    // Show loading state
+    const downloadBtn = event.target;
+    const originalText = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Generating...';
+    downloadBtn.disabled = true;
+    
+    // Create download URL
+    const downloadUrl = `/attendance/timesheet/?month=${month}&year=${year}&format=${format}&employee=${employee}`;
+    
+    // Use fetch to get file as blob
+    fetch(downloadUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Download failed');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            // Set filename based on format
+            if (format === 'excel') {
+                link.download = `timesheet_${month}_${year}.xlsx`;
+            } else if (format === 'csv') {
+                link.download = `timesheet_${month}_${year}.csv`;
+            } else {
+                link.download = `timesheet_${month}_${year}.txt`;
+            }
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up
+            window.URL.revokeObjectURL(url);
+            
+            // Reset button
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+            bootstrap.Modal.getInstance(document.getElementById('timesheetModal')).hide();
+        })
+        .catch(error => {
+            console.error('Download error:', error);
+            alert('Download failed. Please try again.');
+            
+            // Reset button
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+        });
+}
+
+function exportCalendar() {
+    const month = document.getElementById('calendarMonth').value;
+    const year = document.getElementById('calendarYear').value;
+    
+    // Show loading state
+    const exportBtn = event.target;
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Exporting...';
+    exportBtn.disabled = true;
+    
+    // Create export URL
+    const exportUrl = `/attendance/calendar-export/?month=${month}&year=${year}`;
+    
+    // Use fetch to get file as blob
+    fetch(exportUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Export failed');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `calendar_${month}_${year}.txt`;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up
+            window.URL.revokeObjectURL(url);
+            
+            // Reset button
+            exportBtn.innerHTML = originalText;
+            exportBtn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            alert('Export failed. Please try again.');
+            
+            // Reset button
+            exportBtn.innerHTML = originalText;
+            exportBtn.disabled = false;
+        });
+}
+</script>
+
+<style>
+.calendar-container {
+    margin-bottom: 1rem;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    background: var(--bg-secondary);
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.calendar-weekdays {
+    display: contents;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 2px;
+}
+
+.calendar-weekday {
+    text-align: center;
+    font-weight: 600;
+    font-size: var(--font-xs);
+    padding: 8px 4px;
+    background: var(--bg-light);
+    border-radius: 4px;
+    color: var(--text-secondary);
+}
+
+.calendar-days {
+    display: contents;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.calendar-day {
+    background: var(--bg-light);
+    border-radius: 4px;
+    padding: 8px 4px;
+    text-align: center;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.calendar-day:hover {
+    background: var(--bg-hover);
+    transform: translateY(-1px);
+}
+
+.calendar-day.weekend {
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+}
+
+.calendar-day.today {
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+
+.calendar-day.empty {
+    background: transparent;
+}
+
+.calendar-date {
+    font-weight: 600;
+    font-size: var(--font-sm);
+    margin-bottom: 4px;
+}
+
+.calendar-status {
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.attendance-count {
+    font-size: 9px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.timesheet-preview {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.table-modern.table-sm th,
+.table-modern.table-sm td {
+    padding: 6px 8px;
+}
+
+.table-modern.table-sm th {
+    font-size: var(--font-xs);
+}
+
+.table-modern.table-sm td {
+    font-size: var(--font-sm);
+}
+</style>
+{% endblock %}

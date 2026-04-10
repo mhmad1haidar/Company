@@ -1,0 +1,825 @@
+{% extends "base_modern.html" %}
+{% block title %}Telecom Sites Map - Platform{% endblock %}
+
+{% block content %}
+<div class="main-content" style="padding-top: 1px;">
+    <!-- Success Message for Sites Loaded -->
+    {% comment %} Removed duplicate success messages per user request {% endcomment %}
+
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-0" style="margin-bottom: 0;">
+        <div class="page-title-section">
+            <h1 style="margin-bottom: 1px; font-size: 1.2rem;">Telecom Sites Map</h1>
+            <p style="margin-bottom: 0; font-size: 0.8rem; color: #6c757d;">View and navigate to telecom sites locations</p>
+        </div>
+        <div class="page-actions" style="margin-top: -5px;">
+            {% if is_admin %}
+            <button class="btn btn-primary-modern" onclick="importSitesData()" style="padding: 4px 8px; font-size: 0.8rem;">
+                <i class="bi bi-upload me-1"></i>
+                Import Sites Data
+            </button>
+            <button class="btn btn-warning-modern" onclick="clearSitesData()" style="padding: 4px 8px; font-size: 0.8rem;">
+                <i class="bi bi-trash me-1"></i>
+                Clear Data
+            </button>
+            {% endif %}
+            <button class="btn btn-outline-modern" onclick="toggleFullscreen()" id="fullscreenBtn" style="padding: 4px 8px; font-size: 0.8rem;">
+                <i class="bi bi-fullscreen me-1" id="fullscreenIcon"></i>
+                <span id="fullscreenText">Fullscreen</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Import Section -->
+    <div class="row mb-4" id="importSection" style="display: none;">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-file-earmark-csv me-2"></i>
+                        Import Sites Data (CSV)
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form id="sitesImportForm" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <label for="sitesCsvFile" class="form-label-modern">
+                                        <i class="bi bi-file-earmark-csv me-2"></i>
+                                        Sites CSV File
+                                    </label>
+                                    <input type="file" 
+                                           class="form-control-modern" 
+                                           id="sitesCsvFile" 
+                                           name="sites_csv_file" 
+                                           accept=".csv"
+                                           required>
+                                    <small class="form-help-text">Upload CSV file with site data and coordinates</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <label class="form-label-modern">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Expected CSV Columns
+                                    </label>
+                                    <div class="alert alert-info-modern">
+                                        <small>
+                                            <strong>Required:</strong> site_name, address, latitude, longitude<br>
+                                            <strong>Optional:</strong> description, site_code, region
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success-modern">
+                                    <i class="bi bi-cloud-upload me-2"></i>
+                                    Import Sites
+                                </button>
+                                <button type="button" class="btn btn-outline-modern ms-2" onclick="hideImportSection()">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div class="row" style="margin-top: -15px;">
+        <div class="col-md-12">
+            <div class="card-modern" style="margin-bottom: 15px;">
+                <div class="card-body-modern" style="padding: 10px;">
+                    <h5 class="card-title-modern" style="margin-bottom: 5px;">
+                        <i class="bi bi-map text-primary me-2"></i>
+                        Total Sites
+                        <span class="badge bg-primary ms-2" id="siteCount" style="font-size: 0.8rem; padding: 3px 6px; font-weight: normal;">0 Sites</span>
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container - Entire Page -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Telecom Sites Map - Entire Page
+                    </h5>
+                </div>
+                <div class="card-body-modern p-0">
+                    <!-- Map Container - Entire Page with Search Inside -->
+                    <div id="mapContainer" style="height: 95vh; width: 100%; position: relative;">
+                        <!-- Search Bar Inside Map -->
+                        <div style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="siteSearchInput" placeholder="Search sites..." style="width: 250px;">
+                                <button class="btn btn-success-modern" type="button" onclick="searchSites()">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Google Maps will be embedded here -->
+                        <div id="googleMap" style="width: 100%; height: 100%;"></div>
+                        
+                        <!-- Loading Overlay -->
+                        <div id="mapLoading" class="map-loading">
+                            <div class="loading-content">
+                                <div class="spinner"></div>
+                                <p>Loading map...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sites List (Hidden) -->
+    <div class="row mt-4" id="sitesListSection" style="display: none;">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-list-ul me-2"></i>
+                        Sites List
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="table-responsive">
+                        <table class="table table-modern" id="sitesTable">
+                            <thead>
+                                <tr>
+                                    <th>Site Code</th>
+                                    <th>Site Name</th>
+                                    <th>Address</th>
+                                    <th>Coordinates</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Sites will be populated here after import -->
+                                <tr id="noSitesRow">
+                                    <td colspan="5" class="text-center text-muted">
+                                        <i class="bi bi-geo-alt me-2"></i>
+                                        No sites loaded. Import CSV data to display sites on map.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Site Details Modal -->
+<div class="modal fade" id="siteDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header-modern">
+                <h5 class="modal-title-modern">
+                    <i class="bi bi-geo-alt me-2"></i>
+                    Site Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body-modern">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Site Information</h6>
+                        <div id="siteInfo">
+                            <!-- Site details will be populated here -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Location</h6>
+                        <div id="siteMap" style="height: 300px; border-radius: 8px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-modern">
+                <button type="button" class="btn btn-primary-modern" onclick="navigateToSite()">
+                    <i class="bi bi-navigation me-2"></i>
+                    Get Directions
+                </button>
+                <button type="button" class="btn btn-outline-modern" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Map Functionality -->
+<script>
+let map;
+let sites = [];
+let markers = [];
+let selectedSite = null;
+
+// Load sites data from hidden data attribute
+function loadSitesData() {
+    const sitesDataElement = document.getElementById('sites-data');
+    if (sitesDataElement) {
+        try {
+            sites = JSON.parse(sitesDataElement.textContent);
+            console.log('Loaded sites from data attribute:', sites.length, 'sites');
+        } catch (e) {
+            console.error('Error parsing sites data:', e);
+            sites = [];
+        }
+    } else {
+        console.log('No sites data element found');
+    }
+}
+</script>
+
+<!-- Hidden data element for sites (Django template data) -->
+<div id="sites-data" style="display: none;">{{ sites|safe }}</div>
+
+<!-- Main JavaScript functionality -->
+<script>
+
+// Initialize OpenStreetMap (Leaflet)
+function initMap() {
+    // Initialize map centered on Italy
+    map = L.map('googleMap').setView([41.9028, 12.4964], 6);
+    
+    // Use Stadia Maps with satellite style
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png?api_key=f2925937-fc75-43cf-b7e8-a74622b34643', {
+        attribution: '&copy; Stadia Maps &copy; OpenStreetMap contributors',
+        maxZoom: 19,
+        // Add performance optimizations
+        updateWhenIdle: true,
+        updateWhenZooming: false
+    }).addTo(map);
+    
+    // Hide loading overlay
+    document.getElementById('mapLoading').style.display = 'none';
+}
+
+// Clear sites data (admin only)
+function clearSitesData() {
+    if (!confirm('Are you sure you want to clear all sites data? This action cannot be undone.')) {
+        return;
+    }
+    
+    fetch('/interventions/clear-sites-cache/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Clear markers and sites from frontend
+            clearMarkers();
+            sites = [];
+            updateSitesList();
+            document.getElementById('siteCount').textContent = '0 Sites';
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error clearing data:', error);
+        alert('Error clearing sites data');
+    });
+}
+
+// Hide import section
+function importSitesData() {
+    console.log('Import button clicked'); // Debug log
+    const importSection = document.getElementById('importSection');
+    if (importSection) {
+        importSection.style.display = 'block';
+        importSection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        console.error('Import section not found');
+    }
+}
+
+function hideImportSection() {
+    document.getElementById('importSection').style.display = 'none';
+}
+
+// Handle CSV file upload
+document.getElementById('sitesImportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    console.log('Submit button clicked!');
+    
+    const formData = new FormData(this);
+    const fileInput = document.getElementById('sitesCsvFile');
+    
+    if (!fileInput.files[0]) {
+        alert('Please select a CSV file');
+        return;
+    }
+    
+    // Show loading
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Importing...';
+    submitBtn.disabled = true;
+    
+    // Debug: Log form data
+    console.log('Form submission starting...');
+    console.log('File selected:', fileInput.files[0]);
+    console.log('CSRF Token:', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    // Send AJAX request to import CSV
+    fetch('/interventions/import-sites-csv/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        // Handle admin access error
+        if (response.status === 403) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Access denied');
+            });
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        
+        if (data.success) {
+            // Successfully imported sites - no alert needed per user request
+            hideImportSection();
+            
+            // Clear previous sites and markers
+            sites = [];
+            clearMarkers();
+            
+            // Update sites array and refresh map
+            sites = data.sites || [];
+            updateSitesList();
+            sites.forEach(site => addMarkerToMap(site));
+            
+            // Update site count
+            document.getElementById('siteCount').textContent = `${sites.length} Sites`;
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        alert(error.message || 'Error uploading CSV file');
+    });
+});
+
+// Clear all markers from map
+function clearMarkers() {
+    markers.forEach(marker => {
+        map.removeLayer(marker);
+    });
+    markers = [];
+}
+
+// Toggle fullscreen mode for map
+function toggleFullscreen() {
+    const mapContainer = document.getElementById('mapContainer');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const fullscreenIcon = document.getElementById('fullscreenIcon');
+    const fullscreenText = document.getElementById('fullscreenText');
+    
+    if (!document.fullscreenElement) {
+        // Enter fullscreen
+        mapContainer.requestFullscreen().then(() => {
+            fullscreenIcon.className = 'bi bi-fullscreen-exit me-2';
+            fullscreenText.textContent = 'Exit Fullscreen';
+            fullscreenBtn.classList.add('btn-primary-modern');
+            fullscreenBtn.classList.remove('btn-outline-modern');
+            
+            // Refresh map to fit new container size
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }).catch(err => {
+            console.error('Error attempting to enable fullscreen:', err);
+        });
+    } else {
+        // Exit fullscreen
+        document.exitFullscreen().then(() => {
+            fullscreenIcon.className = 'bi bi-fullscreen me-2';
+            fullscreenText.textContent = 'Fullscreen';
+            fullscreenBtn.classList.remove('btn-primary-modern');
+            fullscreenBtn.classList.add('btn-outline-modern');
+            
+            // Refresh map to fit new container size
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }).catch(err => {
+            console.error('Error attempting to exit fullscreen:', err);
+        });
+    }
+}
+
+// Listen for fullscreen changes
+document.addEventListener('fullscreenchange', function() {
+    const mapContainer = document.getElementById('mapContainer');
+    const fullscreenIcon = document.getElementById('fullscreenIcon');
+    const fullscreenText = document.getElementById('fullscreenText');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    
+    if (!document.fullscreenElement) {
+        // Exited fullscreen
+        fullscreenIcon.className = 'bi bi-fullscreen me-2';
+        fullscreenText.textContent = 'Fullscreen';
+        fullscreenBtn.classList.remove('btn-primary-modern');
+        fullscreenBtn.classList.add('btn-outline-modern');
+        
+        // Refresh map to fit new container size
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+    }
+});
+
+// Show site details modal
+function showSiteDetails(site) {
+    selectedSite = site;
+    
+    // Populate modal with site information
+    const siteInfo = document.getElementById('siteInfo');
+    siteInfo.innerHTML = `
+        <div class="site-details">
+            <p><strong>Site Code:</strong> ${site.site_code || 'N/A'}</p>
+            <p><strong>Site Name:</strong> ${site.site_name}</p>
+            <p><strong>Address:</strong> ${site.address}</p>
+            <p><strong>Coordinates:</strong> ${site.latitude}, ${site.longitude}</p>
+            <p><strong>Description:</strong> ${site.description || 'No description available'}</p>
+            ${site.region ? `<p><strong>Region:</strong> ${site.region}</p>` : ''}
+        </div>
+    `;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('siteDetailsModal'));
+    modal.show();
+    
+    // Initialize mini map for site
+    setTimeout(() => {
+        const siteMap = L.map('siteMap').setView([parseFloat(site.latitude), parseFloat(site.longitude)], 15);
+        
+        // Add OpenStreetMap tiles for mini map
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+        }).addTo(siteMap);
+        
+        // Add marker for this site
+        L.marker([parseFloat(site.latitude), parseFloat(site.longitude)])
+            .addTo(siteMap)
+            .bindPopup(`<b>${site.site_name}</b><br>${site.address}`);
+    }, 500);
+}
+
+// Get directions (navigate)
+function navigateToSite() {
+    if (selectedSite) {
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${selectedSite.latitude},${selectedSite.longitude}`;
+        window.open(url, '_blank');
+    }
+}
+
+function searchSites() {
+    const searchTerm = document.getElementById('siteSearchInput').value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+        // If search is empty, show all markers and reset view
+        markers.forEach(marker => {
+            marker.addTo(map);
+        });
+        // Reset map to Italy view
+        map.setView([41.9028, 12.4964], 6);
+        return;
+    }
+    
+    // Show only matching markers
+    const matchingSites = sites.filter(site => 
+        site.site_name.toLowerCase().includes(searchTerm) ||
+        (site.site_code && site.site_code.toLowerCase().includes(searchTerm)) ||
+        site.address.toLowerCase().includes(searchTerm)
+    );
+    
+    // Hide all markers first
+    markers.forEach(marker => {
+        map.removeLayer(marker);
+    });
+    
+    if (matchingSites.length === 0) {
+        // No sites found, show message and reset view
+        alert('No sites found matching your search.');
+        map.setView([41.9028, 12.4964], 6);
+        return;
+    }
+    
+    // Show matching markers and zoom to first result
+    matchingSites.forEach((site, index) => {
+        const marker = markers.find(m => 
+            m.getPopup().getContent().includes(site.site_name)
+        );
+        if (marker) {
+            marker.addTo(map);
+            
+            // If this is the first match, zoom to it and open popup
+            if (index === 0) {
+                const lat = parseFloat(site.latitude);
+                const lng = parseFloat(site.longitude);
+                
+                // Zoom to the site location
+                map.setView([lat, lng], 15);
+                
+                // Open the popup for this site
+                setTimeout(() => {
+                    marker.openPopup();
+                }, 500);
+            }
+        }
+    });
+    
+    // If multiple matches, fit bounds to show all
+    if (matchingSites.length > 1) {
+        const group = new L.featureGroup(matchingSites.map(site => {
+            const marker = markers.find(m => 
+                m.getPopup().getContent().includes(site.site_name)
+            );
+            return marker;
+        }).filter(m => m));
+        
+        if (group.getLayers().length > 0) {
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+    }
+    
+    // Update site count to show search results
+    const siteCount = document.getElementById('siteCount');
+    if (siteCount) {
+        siteCount.textContent = `${matchingSites.length} of ${sites.length} Sites`;
+    }
+}
+
+// Clear search
+function clearSearch() {
+    document.getElementById('siteSearchInput').value = '';
+    searchSites();
+}
+
+// Handle search on Enter key
+document.getElementById('siteSearchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchSites();
+    }
+});
+
+// Initialize map when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Load sites data first
+    loadSitesData();
+    
+    initMap();
+    
+    // Initialize marker cluster group for performance
+    window.markerClusterGroup = L.markerClusterGroup({
+        chunkedLoading: true,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: true,
+        zoomToBoundsOnClick: true
+    });
+    markerClusterGroup.addTo(map);
+    
+    // Debug: Check if sites are loaded from Django
+    console.log('Sites loaded from Django:', sites);
+    console.log('Number of sites:', sites.length);
+    
+    // Add markers for all sites
+    if (sites && sites.length > 0) {
+        console.log('Adding', sites.length, 'markers to map');
+        sites.forEach(site => {
+            if (site.latitude && site.longitude) {
+                addMarkerToMap(site);
+            }
+        });
+        document.getElementById('siteCount').textContent = `${sites.length} Sites`;
+        updateSitesList();
+    } else {
+        console.log('No sites to display');
+        document.getElementById('siteCount').textContent = '0 Sites';
+    }
+});
+
+// Add sample site for testing (will be removed when CSV import is implemented)
+function addSampleSite() {
+    const sampleSite = {
+        site_code: 'SITE-001',
+        site_name: 'Sample Telecom Site',
+        address: 'Via Roma 1, Rome, Italy',
+        latitude: 41.9028,
+        longitude: 12.4964,
+        description: 'Sample site for testing'
+    };
+    
+    sites.push(sampleSite);
+    updateSitesList();
+    addMarkerToMap(sampleSite);
+}
+
+// Update sites list
+function updateSitesList() {
+    const tbody = document.querySelector('#sitesTable tbody');
+    const noSitesRow = document.getElementById('noSitesRow');
+    
+    if (noSitesRow) {
+        noSitesRow.remove();
+    }
+    
+    sites.forEach(site => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${site.site_code || 'N/A'}</td>
+            <td>${site.site_name}</td>
+            <td>${site.address}</td>
+            <td>${site.latitude}, ${site.longitude}</td>
+            <td>
+                <button class="btn btn-sm btn-primary-modern" onclick="showSiteDetails(${JSON.stringify(site).replace(/"/g, '&quot;')})">
+                    <i class="bi bi-eye"></i> View
+                </button>
+                <button class="btn btn-sm btn-info-modern ms-1" onclick="openInGoogleMapsForSite(${JSON.stringify(site).replace(/"/g, '&quot;')})">
+                    <i class="bi bi-map"></i> Maps
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Update site count
+    document.getElementById('siteCount').textContent = `${sites.length} Sites`;
+}
+
+// Add marker to map with clustering for performance
+function addMarkerToMap(site) {
+    if (!map) return;
+    
+    const marker = L.marker([parseFloat(site.latitude), parseFloat(site.longitude)])
+        .bindPopup(`
+            <div style="padding: 10px;">
+                <h6>${site.site_name}</h6>
+                <p><strong>Code:</strong> ${site.site_code || 'N/A'}</p>
+                <p><strong>Address:</strong> ${site.address}</p>
+                <button class="btn btn-sm btn-primary-modern" onclick="showSiteDetails(${JSON.stringify(site).replace(/"/g, '&quot;')})">View Details</button>
+            </div>
+        `);
+    
+    // Add to marker cluster group instead of directly to map
+    window.markerClusterGroup.addLayer(marker);
+    markers.push(marker);
+}
+</script>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet MarkerCluster CSS for performance -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet MarkerCluster JS for performance -->
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+<style>
+#mapContainer {
+    height: 600px;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Fullscreen mode styling */
+#mapContainer:fullscreen {
+    height: 100vh;
+    width: 100vw;
+    border-radius: 0;
+    background: #000;
+}
+
+#mapContainer:-webkit-full-screen {
+    height: 100vh;
+    width: 100vw;
+    border-radius: 0;
+    background: #000;
+}
+
+#mapContainer:-moz-full-screen {
+    height: 100vh;
+    width: 100vw;
+    border-radius: 0;
+    background: #000;
+}
+
+#mapContainer:-ms-fullscreen {
+    height: 100vh;
+    width: 100vw;
+    border-radius: 0;
+    background: #000;
+}
+
+#googleMap {
+    width: 100%;
+    height: 100%;
+}
+
+/* Fullscreen button positioning in fullscreen mode */
+#mapContainer:fullscreen .fullscreen-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+}
+
+.map-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #dee2e6;
+    border-top: 3px solid #6366f1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.site-details p {
+    margin-bottom: 0.5rem;
+}
+
+.modal-header-modern {
+    background: var(--bg-light);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+.modal-body-modern {
+    padding: 1.5rem;
+}
+
+.modal-footer-modern {
+    background: var(--bg-light);
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+.table-modern th {
+    background: var(--bg-light);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.table-modern td {
+    vertical-align: middle;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base_modern.html" %}
+{% block title %}Request Leave - Business Platform{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col">
+      <h1 class="h3 mb-1">Request Leave</h1>
+      <p class="text-muted">Submit a new leave request for approval.</p>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.leave_type.id_for_label }}" class="form-label">
+              <i class="bi bi-tag me-1"></i>Leave Type
+            </label>
+            {{ form.leave_type }}
+            {% if form.leave_type.errors %}
+              {% for error in form.leave_type.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.start_date.id_for_label }}" class="form-label">
+              <i class="bi bi-calendar-event me-1"></i>Start Date
+            </label>
+            {{ form.start_date }}
+            {% if form.start_date.errors %}
+              {% for error in form.start_date.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
+          </div>
+          
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.end_date.id_for_label }}" class="form-label">
+              <i class="bi bi-calendar-event me-1"></i>End Date
+            </label>
+            {{ form.end_date }}
+            {% if form.end_date.errors %}
+              {% for error in form.end_date.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="{{ form.reason.id_for_label }}" class="form-label">
+            <i class="bi bi-chat-text me-2"></i>Reason
+          </label>
+          {{ form.reason }}
+          {% if form.reason.errors %}
+            {% for error in form.reason.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        
+        <div class="mb-3">
+          <label for="{{ form.attachment.id_for_label }}" class="form-label">
+            <i class="bi bi-paperclip me-2"></i>Attachment (Optional)
+          </label>
+          {{ form.attachment }}
+          <div class="form-text">
+            Upload supporting documents (PDF, DOC, DOCX, JPG, JPEG, PNG - Max 10MB)
+          </div>
+          {% if form.attachment.errors %}
+            {% for error in form.attachment.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger" role="alert">
+            {% for error in form.non_field_errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-send me-2"></i>Submit Request
+          </button>
+          <a href="{% url 'leave:leave_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle me-2"></i>Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

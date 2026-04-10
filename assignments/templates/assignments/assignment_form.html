@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+{% if action == 'create' %}Create Work Assignment{% elif action == 'update' %}Update Work Assignment{% elif action == 'create_from_intervention' %}Assign Work: {{ intervention.codice_nigit }}{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>
+                {% if action == 'create' %}Create Work Assignment{% elif action == 'update' %}Update Work Assignment{% elif action == 'create_from_intervention' %}Assign Work: {{ intervention.codice_nigit }}{% endif %}
+            </h1>
+            {% if action == 'create_from_intervention' %}
+            <p>{{ intervention.nome|default:"No name" }} - {{ intervention.cliente|default:"No client" }}</p>
+            {% endif %}
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'assignments:assignment-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Assignment Form -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-clipboard-plus me-2"></i>
+                        {% if action == 'create' %}Create Assignment{% elif action == 'update' %}Update Assignment{% else %}Assignment Details{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <form method="post" id="assignmentForm">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.codice_nigit_input.id_for_label }}" class="form-label">
+                                        {{ form.codice_nigit_input.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.codice_nigit_input }}
+                                    {% if form.codice_nigit_input.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.codice_nigit_input.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if form.codice_nigit_input.help_text %}
+                                        <div class="form-text">{{ form.codice_nigit_input.help_text }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.assigned_to.id_for_label }}" class="form-label">
+                                        {{ form.assigned_to.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.assigned_to }}
+                                    {% if form.assigned_to.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.assigned_to.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.vehicle.id_for_label }}" class="form-label">
+                                        {{ form.vehicle.label }}
+                                    </label>
+                                    {{ form.vehicle }}
+                                    {% if form.vehicle.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.vehicle.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Select a vehicle for the employee to use (optional)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">
+                                        {{ form.status.label }}
+                                    </label>
+                                    {{ form.status }}
+                                    {% if form.status.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.status.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">
+                                        {{ form.scheduled_date.label }}
+                                    </label>
+                                    {{ form.scheduled_date }}
+                                    {% if form.scheduled_date.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.scheduled_date.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">When the work should be performed</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.assignment_note.id_for_label }}" class="form-label">
+                                {{ form.assignment_note.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.assignment_note }}
+                            {% if form.assignment_note.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.assignment_note.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Provide specific instructions for the employee</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'assignments:assignment-list' %}" class="btn btn-outline-modern">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary-modern">
+                                <i class="bi bi-check-circle me-2"></i>
+                                {% if action == 'create' or action == 'create_from_intervention' %}Create Assignment{% else %}Update Assignment{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Intervention Preview -->
+            {% if action == 'create_from_intervention' and intervention %}
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-tools me-2"></i>
+                        Intervention Details
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td class="text-muted">Codice NIGIT:</td>
+                            <td><strong>{{ intervention.codice_nigit }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Client:</td>
+                            <td>{{ intervention.cliente|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Name:</td>
+                            <td>{{ intervention.nome|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Status:</td>
+                            <td>{{ intervention.get_stato_avanzamento_nigit_display|default:"-" }}</td>
+                        </tr>
+                        {% if intervention.international_code %}
+                        <tr>
+                            <td class="text-muted">International Code:</td>
+                            <td>{{ intervention.international_code }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if intervention.codice_sito %}
+                        <tr>
+                            <td class="text-muted">Site Code:</td>
+                            <td>{{ intervention.codice_sito }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Auto-fill Information -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Auto-fill Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="alert alert-info">
+                        <i class="bi bi-magic me-2"></i>
+                        <strong>Automatic Site Detection</strong>
+                    </div>
+                    <p class="small text-muted">
+                        The system will automatically search for site information using:
+                    </p>
+                    <ul class="small text-muted">
+                        <li>International Code from intervention</li>
+                        <li>Site Code (codice_sito) from intervention</li>
+                        <li>Site name matching</li>
+                    </ul>
+                    <p class="small text-muted">
+                        If a matching site is found in the TelecomSite database, the address and coordinates will be automatically filled in the assignment.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-question-circle me-2"></i>
+                        Instructions
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <ol class="small text-muted">
+                        <li>Select an intervention that needs to be assigned</li>
+                        <li>Choose the employee who will perform the work</li>
+                        <li>Optionally assign a vehicle</li>
+                        <li>Provide clear instructions for the employee</li>
+                        <li>Set the status and schedule if needed</li>
+                        <li>Click "Create Assignment" to save</li>
+                    </ol>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <strong>Note:</strong> Once an intervention is assigned, it cannot be assigned to another employee until the current assignment is completed or cancelled.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-update vehicle options when employee is selected
+    const assignedToField = document.getElementById('{{ form.assigned_to.id_for_label }}');
+    const vehicleField = document.getElementById('{{ form.vehicle.id_for_label }}');
+    
+    if (assignedToField && vehicleField) {
+        assignedToField.addEventListener('change', function() {
+            // You could add logic here to filter vehicles based on employee preferences
+            // For now, we'll just show all available vehicles
+        });
+    }
+    
+    // Form validation
+    const form = document.getElementById('assignmentForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const assignmentNote = document.getElementById('{{ form.assignment_note.id_for_label }}');
+            const assignedTo = document.getElementById('{{ form.assigned_to.id_for_label }}');
+            
+            if (assignmentNote && assignmentNote.value.trim() === '') {
+                e.preventDefault();
+                assignmentNote.classList.add('is-invalid');
+                alert('Please provide assignment instructions.');
+                assignmentNote.focus();
+            }
+            
+            if (assignedTo && assignedTo.value === '') {
+                e.preventDefault();
+                assignedTo.classList.add('is-invalid');
+                alert('Please select an employee to assign the work to.');
+                assignedTo.focus();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,756 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}{{ employee.get_full_name|default:employee.username }} - Employee Profile{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-section">
+            <h1>{{ employee.get_full_name|default:employee.username }}</h1>
+            <p>Comprehensive employee profile and management</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'accounts:employee-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Employees
+            </a>
+            <div class="btn-group" role="group">
+                <a href="{% url 'accounts:employee-profile-edit' employee.pk %}" 
+                   class="btn btn-primary-modern">
+                    <i class="bi bi-person-gear me-2"></i>
+                    Edit Profile
+                </a>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary-modern dropdown-toggle" 
+                            id="moreOptionsBtn" aria-expanded="false">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu" id="moreOptionsMenu" style="display: none;">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'accounts:employee-documents' employee.pk %}">
+                                <i class="bi bi-file-earmark-text me-2"></i>
+                                Manage Documents
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'accounts:employee-skills' employee.pk %}">
+                                <i class="bi bi-award me-2"></i>
+                                Manage Skills
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'accounts:employee-assets' employee.pk %}">
+                                <i class="bi bi-laptop me-2"></i>
+                                Manage Assets
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card-modern text-center">
+                <div class="card-body-modern">
+                    <i class="bi bi-file-earmark-text text-primary" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2">{{ documents.count }}</h4>
+                    <p class="text-muted">Documents</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern text-center">
+                <div class="card-body-modern">
+                    <i class="bi bi-award text-success" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2">{{ skills.count }}</h4>
+                    <p class="text-muted">Skills</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern text-center">
+                <div class="card-body-modern">
+                    <i class="bi bi-laptop text-warning" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2">{{ assets.count }}</h4>
+                    <p class="text-muted">Assets</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-modern text-center">
+                <div class="card-body-modern">
+                    <i class="bi bi-clipboard-check text-info" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2">{{ employee_assignments.count }}</h4>
+                    <p class="text-muted">Assignments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Basic Information -->
+        <div class="col-md-4">
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-person-circle me-2"></i>
+                        Basic Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="text-center mb-4">
+                        <div class="avatar-circle mx-auto" style="width: 80px; height: 80px; font-size: 32px;">
+                            {% if employee.get_full_name %}
+                                {{ employee.get_full_name|slice:":2"|upper }}
+                            {% else %}
+                                {{ employee.username|slice:":2"|upper }}
+                            {% endif %}
+                        </div>
+                        <h5>{{ employee.get_full_name|default:employee.username }}</h5>
+                        <p class="text-muted">@{{ employee.username }}</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            {% if employee.is_superuser %}
+                            <span class="badge bg-danger">Super Admin</span>
+                            {% elif employee.is_staff %}
+                            <span class="badge bg-warning">Staff</span>
+                            {% else %}
+                            <span class="badge bg-info">Employee</span>
+                            {% endif %}
+                            {% if employee.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <strong>Employee ID:</strong><br>
+                            <span class="text-muted">{{ employee.employee_id|default:"Not assigned" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Email:</strong><br>
+                            <a href="mailto:{{ employee.email }}">{{ employee.email }}</a>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Department:</strong><br>
+                            <span class="text-muted">{{ employee.department|default:"Not assigned" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Job Title:</strong><br>
+                            <span class="text-muted">{{ employee.job_title|default:"Not assigned" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Role:</strong><br>
+                            <span class="badge bg-{{ employee.role|default:'secondary' }}">{{ employee.get_role_display|default:"Not set" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Member Since:</strong><br>
+                            <span class="text-muted">{{ employee.date_joined|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Last Login:</strong><br>
+                            {% if employee.last_login %}
+                            <span class="text-muted">{{ employee.last_login|date:"d/m/Y H:i" }}</span>
+                            {% else %}
+                            <span class="text-muted">Never logged in</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="card-modern mb-4">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-telephone me-2"></i>
+                        Contact Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <strong>Personal Phone:</strong><br>
+                            <span class="text-muted">{{ profile.personal_phone|default:"Not provided" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Work Phone:</strong><br>
+                            <span class="text-muted">{{ profile.work_phone|default:"Not provided" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Emergency Contact:</strong><br>
+                            <span class="text-muted">{{ profile.emergency_contact_name|default:"Not provided" }}</span><br>
+                            <small>{{ profile.emergency_contact_phone|default:"No phone" }} ({{ profile.emergency_contact_relation|default:"No relation" }})</small>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Address:</strong><br>
+                            <span class="text-muted">{{ profile.current_address|default:"Not provided" }}</span><br>
+                            {% if profile.city or profile.state %}
+                            <small>{{ profile.city|default:"" }}{% if profile.city and profile.state %}, {% endif %}{{ profile.state|default:"" }}</small><br>
+                            {% endif %}
+                            {% if profile.postal_code %}
+                            <small>{{ profile.postal_code }}</small><br>
+                            {% endif %}
+                            {% if profile.country %}
+                            <small>{{ profile.country }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Professional Information -->
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-briefcase me-2"></i>
+                        Professional Information
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <strong>Hire Date:</strong><br>
+                            <span class="text-muted">{{ profile.hire_date|date:"d/m/Y"|default:"Not provided" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Employment Type:</strong><br>
+                            <span class="badge bg-info">{{ profile.get_employment_type_display|default:"Not set" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Work Location:</strong><br>
+                            <span class="text-muted">{{ profile.work_location|default:"Not provided" }}</span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <strong>Reporting Manager:</strong><br>
+                            {% if profile.reporting_manager %}
+                            <a href="{% url 'accounts:employee-detail' profile.reporting_manager.pk %}">
+                                {{ profile.reporting_manager.get_full_name|default:profile.reporting_manager.username }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Information Tabs -->
+        <div class="col-md-8">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#overview" role="tab">
+                                <i class="bi bi-grid-3x3-gap me-2"></i>Overview
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#documents" role="tab">
+                                <i class="bi bi-file-earmark-text me-2"></i>Documents ({{ documents.count }})
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#skills" role="tab">
+                                <i class="bi bi-award me-2"></i>Skills ({{ skills.count }})
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#assets" role="tab">
+                                <i class="bi bi-laptop me-2"></i>Assets ({{ assets.count }})
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#assignments" role="tab">
+                                <i class="bi bi-clipboard-check me-2"></i>Assignments ({{ employee_assignments.count }})
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body-modern">
+                    <div class="tab-content">
+                        <!-- Overview Tab -->
+                        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-person me-2"></i>Personal Details</h6>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Date of Birth:</strong></td>
+                                            <td>{{ profile.date_of_birth|date:"d/m/Y"|default:"Not provided" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Gender:</strong></td>
+                                            <td>{{ profile.get_gender_display|default:"Not specified" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Blood Group:</strong></td>
+                                            <td>{{ profile.blood_group|default:"Not provided" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Marital Status:</strong></td>
+                                            <td>{{ profile.get_marital_status_display|default:"Not specified" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Nationality:</strong></td>
+                                            <td>{{ profile.nationality|default:"Not provided" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-bank me-2"></i>Financial Information</h6>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Bank Name:</strong></td>
+                                            <td>{{ profile.bank_name|default:"Not provided" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Account Number:</strong></td>
+                                            <td>{{ profile.bank_account_number|default:"Not provided" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>IFSC Code:</strong></td>
+                                            <td>{{ profile.bank_ifsc_code|default:"Not provided" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Salary:</strong></td>
+                                            <td>{{ profile.salary|default:"Not specified" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            {% if employee_attendance %}
+                            <h6 class="mt-4"><i class="bi bi-clock-history me-2"></i>Recent Attendance</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Check In</th>
+                                            <th>Check Out</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for attendance in employee_attendance %}
+                                        <tr>
+                                            <td>{{ attendance.date|date:"d/m/Y" }}</td>
+                                            <td>{{ attendance.check_in|default:"-"|time:"H:i" }}</td>
+                                            <td>{{ attendance.check_out|default:"-"|time:"H:i" }}</td>
+                                            <td>
+                                                {% if attendance.status == 'present' %}
+                                                <span class="badge bg-success">Present</span>
+                                                {% elif attendance.status == 'absent' %}
+                                                <span class="badge bg-danger">Absent</span>
+                                                {% elif attendance.status == 'late' %}
+                                                <span class="badge bg-warning">Late</span>
+                                                {% else %}
+                                                <span class="badge bg-info">{{ attendance.status|title }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Documents Tab -->
+                        <div class="tab-pane fade" id="documents" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Employee Documents</h5>
+                                <a href="{% url 'accounts:employee-documents' employee.pk %}" class="btn btn-primary-modern btn-sm">
+                                    <i class="bi bi-plus-circle me-2"></i>Upload Document
+                                </a>
+                            </div>
+                            
+                            {% if documents %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Title</th>
+                                            <th>Upload Date</th>
+                                            <th>Expiry</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for doc in documents %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-info">{{ doc.get_document_type_display }}</span>
+                                            </td>
+                                            <td>
+                                                <strong>{{ doc.title }}</strong>
+                                                {% if doc.description %}
+                                                <br><small class="text-muted">{{ doc.description|truncatechars:50 }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ doc.upload_date|date:"d/m/Y" }}</td>
+                                            <td>
+                                                {% if doc.expiry_date %}
+                                                <span class="{% if doc.is_expired %}text-danger{% else %}text-muted{% endif %}">
+                                                    {{ doc.expiry_date|date:"d/m/Y" }}
+                                                </span>
+                                                {% else %}
+                                                <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if doc.is_verified %}
+                                                <span class="badge bg-success">Verified</span>
+                                                {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-modern" title="Download">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                    {% if perms.accounts.change_employeedocument %}
+                                                    <button class="btn btn-sm btn-outline-modern" title="Verify">
+                                                        <i class="bi bi-check-circle"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: #6c757d;"></i>
+                                <h5 class="mt-3">No Documents</h5>
+                                <p class="text-muted">No documents have been uploaded for this employee.</p>
+                                <a href="{% url 'accounts:employee-documents' employee.pk %}" class="btn btn-primary-modern">
+                                    <i class="bi bi-plus-circle me-2"></i>Upload First Document
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Skills Tab -->
+                        <div class="tab-pane fade" id="skills" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Skills & Qualifications</h5>
+                                <a href="{% url 'accounts:employee-skills' employee.pk %}" class="btn btn-primary-modern btn-sm">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Skill
+                                </a>
+                            </div>
+                            
+                            {% if skills %}
+                            <div class="row">
+                                {% for skill in skills %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card-modern">
+                                        <div class="card-body-modern">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="mb-1">{{ skill.skill_name }}</h6>
+                                                    <span class="badge bg-{{ skill.skill_level|default:'secondary' }}">
+                                                        {{ skill.get_skill_level_display }}
+                                                    </span>
+                                                    {% if skill.years_of_experience %}
+                                                    <span class="badge bg-info">{{ skill.years_of_experience }} years</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% if skill.certification %}
+                                            <p class="mb-1 mt-2">
+                                                <strong>Certification:</strong> {{ skill.certification }}
+                                            </p>
+                                            {% if skill.certification_date %}
+                                            <small class="text-muted">
+                                                Issued: {{ skill.certification_date|date:"d/m/Y" }}
+                                                {% if skill.expiry_date %}
+                                                | Expires: {{ skill.expiry_date|date:"d/m/Y" }}
+                                                {% endif %}
+                                            </small>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-award" style="font-size: 3rem; color: #6c757d;"></i>
+                                <h5 class="mt-3">No Skills</h5>
+                                <p class="text-muted">No skills have been added for this employee.</p>
+                                <a href="{% url 'accounts:employee-skills' employee.pk %}" class="btn btn-primary-modern">
+                                    <i class="bi bi-plus-circle me-2"></i>Add First Skill
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Assets Tab -->
+                        <div class="tab-pane fade" id="assets" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Allocated Assets</h5>
+                                <a href="{% url 'accounts:employee-assets' employee.pk %}" class="btn btn-primary-modern btn-sm">
+                                    <i class="bi bi-plus-circle me-2"></i>Allocate Asset
+                                </a>
+                            </div>
+                            
+                            {% if assets %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Asset</th>
+                                            <th>Type</th>
+                                            <th>Asset Tag</th>
+                                            <th>Allocation Date</th>
+                                            <th>Condition</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for asset in assets %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ asset.asset_name }}</strong>
+                                                {% if asset.brand or asset.model %}
+                                                <br><small class="text-muted">{{ asset.brand }} {{ asset.model }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ asset.get_asset_type_display }}</span>
+                                            </td>
+                                            <td><code>{{ asset.asset_tag }}</code></td>
+                                            <td>{{ asset.allocation_date|date:"d/m/Y" }}</td>
+                                            <td>
+                                                <span class="badge bg-{{ asset.condition|default:'secondary' }}">
+                                                    {{ asset.get_condition_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-sm btn-outline-modern" title="View Details">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-modern" title="Return Asset">
+                                                        <i class="bi bi-box-arrow-right"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-laptop" style="font-size: 3rem; color: #6c757d;"></i>
+                                <h5 class="mt-3">No Assets</h5>
+                                <p class="text-muted">No assets have been allocated to this employee.</p>
+                                <a href="{% url 'accounts:employee-assets' employee.pk %}" class="btn btn-primary-modern">
+                                    <i class="bi bi-plus-circle me-2"></i>Allocate First Asset
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Assignments Tab -->
+                        <div class="tab-pane fade" id="assignments" role="tabpanel">
+                            <h5 class="mb-3">Recent Work Assignments</h5>
+                            
+                            {% if employee_assignments %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Assignment</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for assignment in employee_assignments %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ assignment.codice_nigit }}</strong>
+                                                {% if assignment.intervention %}
+                                                <br><small class="text-muted">{{ assignment.intervention.nome|truncatechars:30 }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if assignment.status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                                {% elif assignment.status == 'in_progress' %}
+                                                <span class="badge bg-primary">In Progress</span>
+                                                {% elif assignment.status == 'assigned' %}
+                                                <span class="badge bg-info">Assigned</span>
+                                                {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small>{{ assignment.created_at|date:"d/m/Y H:i" }}</small>
+                                            </td>
+                                            <td>
+                                                <a href="#" class="btn btn-sm btn-outline-modern" title="View Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-clipboard-check" style="font-size: 3rem; color: #6c757d;"></i>
+                                <h5 class="mt-3">No Assignments</h5>
+                                <p class="text-muted">This employee hasn't been assigned any work yet.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.card-modern {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.card-header-modern {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #6c757d;
+}
+
+.nav-tabs .nav-link.active {
+    border-bottom-color: var(--primary);
+    color: var(--primary);
+    background: none;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom-color: var(--primary);
+    color: var(--primary);
+}
+
+.table-modern {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table-modern th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table-modern td {
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-modern tbody tr:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Fallback for dropdown if Bootstrap doesn't work -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdownButton = document.getElementById('moreOptionsBtn');
+    const dropdownMenu = document.getElementById('moreOptionsMenu');
+    
+    if (dropdownButton && dropdownMenu) {
+        console.log('Dropdown elements found');
+        
+        dropdownButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Dropdown button clicked');
+            
+            // Toggle dropdown visibility
+            if (dropdownMenu.style.display === 'block') {
+                dropdownMenu.style.display = 'none';
+                console.log('Dropdown hidden');
+            } else {
+                dropdownMenu.style.display = 'block';
+                dropdownMenu.style.position = 'absolute';
+                dropdownMenu.style.top = '100%';
+                dropdownMenu.style.right = '0';
+                dropdownMenu.style.zIndex = '1000';
+                dropdownMenu.style.minWidth = '200px';
+                dropdownMenu.style.border = '1px solid #dee2e6';
+                dropdownMenu.style.borderRadius = '6px';
+                dropdownMenu.style.boxShadow = '0 6px 12px rgba(0,0,0,0.175)';
+                dropdownMenu.style.backgroundColor = 'white';
+                dropdownMenu.style.padding = '8px 0';
+                console.log('Dropdown shown');
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.style.display = 'none';
+                console.log('Dropdown closed by outside click');
+            }
+        });
+    } else {
+        console.log('Dropdown elements not found');
+    }
+});
+</script>
+{% endblock %}

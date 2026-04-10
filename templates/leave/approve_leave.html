@@ -1,0 +1,61 @@
+{% extends "base_modern.html" %}
+{% block title %}Approve Leave - Business Platform{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Review Leave Request</h1>
+  
+  <div style="background: rgba(255, 212, 0, 0.1); border: 1px solid var(--warning); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+    <h3 style="margin: 0 0 0.5rem 0; color: var(--warning);">Request Details</h3>
+    <dl>
+      <dt>Employee</dt>
+      <dd>{{ leave.user.get_full_name|default:leave.user.get_username }}</dd>
+      
+      <dt>Leave Type</dt>
+      <dd>{{ leave.leave_type.name }}</dd>
+      
+      <dt>Duration</dt>
+      <dd>
+        {{ leave.start_date|date:"M d, Y" }} – {{ leave.end_date|date:"M d, Y" }}
+        {% with leave.days_count|default:1 as days %}
+          ({{ days }} day{{ days|pluralize }})
+        {% endwith %}
+      </dd>
+      
+      <dt>Requested On</dt>
+      <dd>{{ leave.created_at|date:"M d, Y H:i" }}</dd>
+      
+      {% if leave.reason %}
+      <dt>Reason</dt>
+      <dd>{{ leave.reason|linebreaks }}</dd>
+      {% endif %}
+    </dl>
+  </div>
+  
+  <form method="post" style="margin-top: 1.5rem;">
+    {% csrf_token %}
+    
+    <div>
+      <label for="{{ form.status.id_for_label }}">Decision</label>
+      {{ form.status }}
+      {% if form.status.errors %}
+        {% for error in form.status.errors %}
+          <p class="field-error">{{ error }}</p>
+        {% endfor %}
+      {% endif %}
+    </div>
+    
+    {% if form.non_field_errors %}
+      <div class="form-errors">
+        {% for error in form.non_field_errors %}
+          <p>{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    
+    <div class="row" style="margin-top: 1rem;">
+      <button type="submit" class="btn btn-primary">Submit Decision</button>
+      <a href="{% url 'leave:leave_admin_list' %}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

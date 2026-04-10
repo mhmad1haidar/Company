@@ -1,0 +1,392 @@
+{% extends "base_modern.html" %}
+{% block title %}Warehouse Dashboard - Platform{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Compact Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Warehouse Management</h1>
+            <p>Inventory control and stock management</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'warehouse:item_create' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i>
+                Add Item
+            </a>
+            <a href="{% url 'warehouse:item_list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-box-seam me-2"></i>
+                All Items
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Row -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div class="stat-number">{{ total_items }}</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="stat-number">{{ active_items }}</div>
+                <div class="stat-label">Active Items</div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="stat-number">{{ low_stock_items }}</div>
+                <div class="stat-label">Low Stock</div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon danger">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+                <div class="stat-number">{{ out_of_stock_items }}</div>
+                <div class="stat-label">Out of Stock</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Row -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon info">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="stat-number">{{ pending_requests }}</div>
+                <div class="stat-label">Pending Requests</div>
+                <div class="mt-2">
+                    <a href="{% url 'warehouse:request_list' %}" class="btn btn-sm btn-outline-modern">
+                        View Requests
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon secondary">
+                    <i class="bi bi-tags"></i>
+                </div>
+                <div class="stat-number">{{ total_categories }}</div>
+                <div class="stat-label">Categories</div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon secondary">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div class="stat-number">{{ total_suppliers }}</div>
+                <div class="stat-label">Suppliers</div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="bi bi-arrow-left-right"></i>
+                </div>
+                <div class="stat-number">--</div>
+                <div class="stat-label">Stock Movements</div>
+                <div class="mt-2">
+                    <a href="{% url 'warehouse:movement_list' %}" class="btn btn-sm btn-outline-modern">
+                        View Movements
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Alert -->
+    {% if low_stock_items_list %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+                        Low Stock Alert
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        {% for item in low_stock_items_list %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="alert alert-warning-modern alert-sm">
+                                <strong>{{ item.code }}</strong> - {{ item.name }}
+                                <br>
+                                <small>Current: {{ item.quantity }} | Min: {{ item.min_quantity }}</small>
+                                <div class="mt-2">
+                                    <a href="{% url 'warehouse:item_detail' item.pk %}" class="btn btn-sm btn-warning-modern">
+                                        Manage Stock
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Items -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>
+                        Recent Items
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if items %}
+                    <div class="table-responsive">
+                        <table class="table table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td><strong>{{ item.code }}</strong></td>
+                                    <td>{{ item.name }}</td>
+                                    <td>{{ item.category.name|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge {% if item.is_low_stock %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ item.quantity }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ item.status|default:'secondary' }}">
+                                            {{ item.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'warehouse:item_detail' item.pk %}" class="btn btn-sm btn-outline-modern">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-box-seam"></i>
+                        <h5>No items found</h5>
+                        <p>Start by adding your first warehouse item.</p>
+                        <a href="{% url 'warehouse:item_create' %}" class="btn btn-primary-modern">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Add First Item
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-clock-history me-2 text-info"></i>
+                        Recent Stock Movements
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if recent_movements %}
+                    <div class="activity-list">
+                        {% for movement in recent_movements %}
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                {% if movement.movement_type == 'in' %}
+                                    <i class="bi bi-arrow-down-circle text-success"></i>
+                                {% elif movement.movement_type == 'out' %}
+                                    <i class="bi bi-arrow-up-circle text-danger"></i>
+                                {% else %}
+                                    <i class="bi bi-arrow-left-right text-warning"></i>
+                                {% endif %}
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-title">
+                                    {{ movement.item.code }} - {{ movement.get_movement_type_display }}
+                                </div>
+                                <div class="activity-time">
+                                    {{ movement.created_at|date:"H:i" }} - 
+                                    {% if movement.quantity > 0 %}+{% endif %}{{ movement.quantity }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-clock-history"></i>
+                        <h5>No movements yet</h5>
+                        <p>Stock movements will appear here.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Requests -->
+    {% if pending_requests_list %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="bi bi-clock me-2 text-warning"></i>
+                        Pending Requests
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        {% for request in pending_requests_list %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="alert alert-info-modern alert-sm">
+                                <strong>{{ request.item.name }}</strong>
+                                <br>
+                                <small>Requested: {{ request.quantity_requested }} by {{ request.requester.get_full_name|default:request.requester.username }}</small>
+                                <div class="mt-2">
+                                    <a href="{% url 'warehouse:approve_request' request.pk %}" class="btn btn-sm btn-success-modern">
+                                        Approve
+                                    </a>
+                                    <a href="{% url 'warehouse:reject_request' request.pk %}" class="btn btn-sm btn-danger-modern">
+                                        Reject
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+<style>
+.alert-warning-modern {
+    background: var(--warning);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.alert-info-modern {
+    background: var(--info);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.alert-sm {
+    padding: 0.75rem;
+}
+
+.activity-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 16px;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+}
+
+.activity-time {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.table-modern {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table-modern th {
+    background: var(--bg-light);
+    border: none;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 1rem;
+}
+
+.table-modern td {
+    border: none;
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+}
+
+.table-modern tbody tr:hover {
+    background: var(--bg-light);
+}
+</style>
