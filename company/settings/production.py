@@ -53,3 +53,16 @@ if not env.bool("API_ENABLE_BASIC_AUTH", default=False):  # noqa: F405
 # Additional security headers for production
 SECURE_SSL_HOST = env.str("SECURE_SSL_HOST", default=None)  # noqa: F405
 SECURE_REDIRECT_EXEMPT = env.list("SECURE_REDIRECT_EXEMPT", default=[])  # noqa: F405
+
+
+
+import os
+import dj_database_url
+
+DATABASES = {
+    "default": dj_database_url.parse(
+        os.environ.get("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=True,
+    )
+}
