@@ -4,6 +4,18 @@ from .base import *  # noqa: F403
 
 DEBUG = False
 
+import os
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "company-nt5o.onrender.com",
+]
+
+render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if render_hostname:
+    ALLOWED_HOSTS.append(render_hostname)
+
 # Fail fast if SECRET_KEY is left at dev default
 if SECRET_KEY == "django-insecure-dev-only-change-in-production":  # noqa: F405
     raise ValueError(
