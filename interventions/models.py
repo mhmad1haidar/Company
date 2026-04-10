@@ -10,7 +10,6 @@ class TelecomSite(models.Model):
     """
     Model for storing telecom sites data
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     site_name = models.CharField(max_length=200, verbose_name="Site Name")
     site_code = models.CharField(max_length=50, blank=True, null=True, verbose_name="Site Code")
     area = models.CharField(max_length=100, blank=True, null=True, verbose_name="Area")
