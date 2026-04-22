@@ -11,7 +11,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('fleet', '0002_alter_carusage_unique_together_carusage_intervention_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
