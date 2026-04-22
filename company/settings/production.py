@@ -66,3 +66,6 @@ DATABASES = {
         ssl_require=True,
     )
 }
+CSRF_TRUSTED_ORIGINS = [
+    "https://company-nt5o.onrender.com",
+]
