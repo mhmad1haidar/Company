@@ -313,6 +313,7 @@ function deleteAssignment(pk, assignmentCode) {
 
     <!-- Modern Business Metrics - My Assignments on Separate Row -->
     <!-- Row 1: My Assignments (Alone) -->
+    {% if user_assignments > 0 %}
     <div class="row mb-2">
         <div class="col-12">
             <div class="metric-card" style="background: linear-gradient(135deg, #fef7ff 0%, #faf5ff 100%); border: 1px solid #e9d5ff; border-radius: 12px; padding: 1.2rem; transition: all 0.3s ease; position: relative;">
@@ -336,9 +337,39 @@ function deleteAssignment(pk, assignmentCode) {
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Row 2: Other Metrics (Together) -->
     <div class="row mb-2">
+        <!-- Total Assignments (Admin Only) -->
+        {% if request.user.is_superuser or request.user.is_staff or request.user.role in 'admin,manager' %}
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
+            <div class="metric-card" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #e9d5ff; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
+                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.15);">
+                        <i class="bi bi-list-task" style="font-size: 1rem; color: white;"></i>
+                    </div>
+                    <div class="metric-badge" style="background: #ede9fe; color: #7c3aed; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Admin</div>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ total_assignments|default:0 }}</div>
+                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">Total Assignments</div>
+                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">All Work</div>
+                        <div class="btn-group">
+                            <a href="{% url 'assignments:assignment-create' %}" class="btn btn-sm btn-success" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                                <i class="bi bi-plus"></i> New
+                            </a>
+                            <a href="{% url 'assignments:assignment-list' %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                                <i class="bi bi-list"></i> Manage
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Pending Assignments (Superuser Only) -->
         {% if request.user.is_superuser and pending_assignments >= 1 %}
         <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
@@ -414,34 +445,6 @@ function deleteAssignment(pk, assignmentCode) {
         </div>
         {% endif %}
         
-        <!-- Total Assignments (Admin Only) -->
-        {% if request.user.is_superuser or request.user.is_staff or request.user.role in 'admin,manager' %}
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
-            <div class="metric-card" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #e9d5ff; border-radius: 12px; padding: 1rem; transition: all 0.3s ease; position: relative;">
-                <div class="metric-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                    <div class="metric-icon" style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.15);">
-                        <i class="bi bi-list-task" style="font-size: 1rem; color: white;"></i>
-                    </div>
-                    <div class="metric-badge" style="background: #ede9fe; color: #7c3aed; padding: 0.2rem 0.6rem; border-radius: 15px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Admin</div>
-                </div>
-                <div class="metric-content">
-                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1;">{{ total_assignments|default:0 }}</div>
-                    <div class="metric-title" style="font-size: 0.75rem; color: #64748b; font-weight: 500; margin-bottom: 0.5rem;">Total Assignments</div>
-                    <div class="metric-action" style="display: flex; align-items: center; justify-content: space-between;">
-                        <div class="metric-subtitle" style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">All Work</div>
-                        <div class="btn-group">
-                            <a href="{% url 'assignments:assignment-create' %}" class="btn btn-sm btn-success" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
-                                <i class="bi bi-plus"></i> New
-                            </a>
-                            <a href="{% url 'assignments:assignment-list' %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
-                                <i class="bi bi-list"></i> Manage
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         {% if completed_worked_total >= 1 %}
         <!-- Work Completed (Admin Only) -->
         <div class="col-lg-3 col-md-6 col-sm-6 mb-2">
@@ -496,7 +499,6 @@ function deleteAssignment(pk, assignmentCode) {
                 </div>
             </div>
         </div>
-        {% endif %}
         {% endif %}
     </div>
     
@@ -715,40 +717,22 @@ function deleteAssignment(pk, assignmentCode) {
                             {% endif %}
                         </div>
 
-                        <!-- Notification Widget -->
-                        <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
-                            <h6 class="mb-0 fw-bold">
-                                <i class="bi bi-bell me-2 text-primary"></i>
-                                Recent Notifications
-                            </h6>
-                            <span class="badge bg-primary bg-opacity-10 text-primary">{{ unread_notifications }} unread</span>
-                        </div>
-                        
-                        {% if recent_notifications %}
-                        <div class="notifications-list mb-4">
-                            {% for notification in recent_notifications %}
-                            <div class="notification-item border rounded-3 p-3 mb-2 shadow-sm {% if not notification.is_read %}bg-light{% endif %}" style="border-left: 4px solid {% if not notification.is_read %}#4f46e5{% else %}#e2e8f0{% endif %};">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="fw-semibold mb-1">{{ notification.title }}</div>
-                                        <div class="text-muted small mb-1">{{ notification.message }}</div>
-                                        <div class="text-muted small" style="font-size: 11px;">{{ notification.created_at|date:"M d, Y H:i" }}</div>
-                                    </div>
-                                    {% if notification.link %}
-                                    <a href="{{ notification.link }}" class="btn btn-sm btn-outline-modern ms-2">
-                                        <i class="bi bi-arrow-right"></i>
-                                    </a>
-                                    {% endif %}
+                        <!-- Announcements -->
+                        <div id="announcements-section">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0 fw-bold">
+                                    <i class="bi bi-megaphone me-2 text-primary"></i>
+                                    Announcements
+                                </h6>
+                                <a href="{% url 'accounts:announcement-list' %}" class="text-decoration-none small">View All</a>
+                            </div>
+                            <div id="announcements-container">
+                                <div class="text-center text-muted py-3">
+                                    <i class="bi bi-megaphone fs-4 mb-2 d-block"></i>
+                                    <small>Loading announcements...</small>
                                 </div>
                             </div>
-                            {% endfor %}
                         </div>
-                        {% else %}
-                        <div class="text-center text-muted py-3 mb-4">
-                            <i class="bi bi-bell-slash fs-4 mb-2 d-block"></i>
-                            <small>No notifications</small>
-                        </div>
-                        {% endif %}
 
                         <!-- Enhanced Recent Assignments -->
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1071,5 +1055,69 @@ function deleteAssignment(pk, assignmentCode) {
     }
 }
 </style>
+
+<script>
+// Load announcements dynamically
+function loadAnnouncements() {
+    fetch('/accounts/announcements/dashboard/')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('announcements-container');
+            if (container && data.announcements) {
+                if (data.announcements.length > 0) {
+                    let html = '';
+                    data.announcements.forEach(announcement => {
+                        const priorityColors = {
+                            'low': 'success',
+                            'medium': 'info',
+                            'high': 'warning',
+                            'urgent': 'danger'
+                        };
+                        const color = priorityColors[announcement.priority] || 'secondary';
+
+                        html += `
+                            <div class="border rounded-3 p-3 mb-2 shadow-sm" style="border-left: 4px solid var(--${color});">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="mb-0 fw-semibold">${announcement.title}</h6>
+                                    <span class="badge bg-${color} bg-opacity-10 text-${color}">${announcement.priority_display}</span>
+                                </div>
+                                <p class="mb-1 text-muted small">${announcement.content}</p>
+                                <small class="text-muted" style="font-size: 11px;">
+                                    <i class="bi bi-person me-1"></i>${announcement.author} | 
+                                    <i class="bi bi-clock me-1"></i>${announcement.created_at}
+                                </small>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-megaphone-slash fs-4 mb-2 d-block"></i>
+                            <small>No announcements</small>
+                        </div>
+                    `;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading announcements:', error);
+            const container = document.getElementById('announcements-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-exclamation-triangle fs-4 mb-2 d-block"></i>
+                        <small>Failed to load announcements</small>
+                    </div>
+                `;
+            }
+        });
+}
+
+// Load announcements when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnnouncements();
+});
+</script>
 
 {% endblock %}

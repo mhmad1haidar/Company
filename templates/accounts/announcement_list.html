@@ -1,0 +1,77 @@
+{% extends 'base_modern.html' %}
+
+{% block title %}Announcements{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-megaphone me-2"></i>Announcements</h2>
+                {% if user.is_staff or user.is_superuser %}
+                <a href="{% url 'accounts:announcement-create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Create Announcement
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="row">
+                {% for announcement in announcements %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span class="badge bg-{{ announcement.priority }} bg-opacity-10 text-{{ announcement.priority }}">
+                                {{ announcement.get_priority_display }}
+                            </span>
+                            <small class="text-muted">{{ announcement.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ announcement.title }}</h5>
+                            <p class="card-text text-muted small">{{ announcement.content|truncatewords:20 }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <small class="text-muted">By: {{ announcement.author.get_full_name|default:announcement.author.username }}</small>
+                                <a href="{% url 'accounts:announcement-detail' announcement.id %}" class="btn btn-sm btn-outline-primary">Read More</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <i class="bi bi-megaphone-slash fs-1 text-muted mb-3 d-block"></i>
+                    <h5 class="text-muted">No announcements</h5>
+                    <p class="text-muted">There are no announcements at this time.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

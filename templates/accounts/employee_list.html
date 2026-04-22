@@ -8,18 +8,77 @@
     <!-- Page Header -->
     <div class="page-header d-flex justify-content-between align-items-center mb-4">
         <div class="page-title-section">
-            <h1>Employees</h1>
-            <p>Manage company employees and their information</p>
+            <h1>{% if is_archive %}Employee Archive{% else %}Employees{% endif %}</h1>
+            <p>{% if is_archive %}View and manage archived employees (ex-employees){% else %}Manage company employees and their information{% endif %}</p>
         </div>
         <div class="page-actions">
+            {% if is_archive %}
+            <a href="{% url 'accounts:employee-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Employees
+            </a>
+            {% else %}
+            <a href="{% url 'accounts:employee-archive' %}" class="btn btn-outline-modern">
+                <i class="bi bi-archive me-2"></i>
+                Employee Archive
+            </a>
             {% if perms.auth.add_user %}
             <a href="{% url 'accounts:employee-create' %}" class="btn btn-primary-modern">
                 <i class="bi bi-person-plus me-2"></i>
                 Add New Employee
             </a>
             {% endif %}
+            {% endif %}
         </div>
     </div>
+
+    <!-- Employee Statistics -->
+    {% if not is_archive %}
+    {% if employees.paginator.count > 0 or inactive_employees > 0 %}
+    <div class="row mb-3">
+        {% if employees.paginator.count > 0 %}
+        <div class="col-md-6">
+            <div class="card-modern" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem; transition: all 0.3s ease; position: relative; overflow: hidden;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.15);">
+                            <i class="bi bi-person-check" style="font-size: 1.2rem; color: white;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1;">{{ employees.paginator.count }}</div>
+                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Active Employees</div>
+                        </div>
+                    </div>
+                    <div class="badge rounded-pill" style="background: #dcfce7; color: #166534; padding: 0.4rem 0.8rem; font-size: 0.7rem; font-weight: 600;">
+                        Currently Working
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if inactive_employees > 0 %}
+        <div class="col-md-6{% if employees.paginator.count > 0 %}{% else %}col-md-12{% endif %}">
+            <div class="card-modern" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem; transition: all 0.3s ease; position: relative; overflow: hidden;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3" style="width: 48px; height: 48px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(239, 68, 68, 0.15);">
+                            <i class="bi bi-person-x" style="font-size: 1.2rem; color: white;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1;">{{ inactive_employees }}</div>
+                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Inactive Employees</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'accounts:employee-archive' %}" class="btn btn-sm btn-outline-danger" style="font-size: 0.7rem; padding: 0.35rem 0.75rem;">
+                        View Archive
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endif %}
 
     <!-- Search and Filters -->
     <div class="card-modern mb-4">

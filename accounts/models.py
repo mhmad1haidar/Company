@@ -4,7 +4,6 @@ from django.core.validators import RegexValidator
 import os
 from django.utils import timezone
 
-
 def employee_document_path(instance, filename):
     """Generate upload path for employee documents: employee_documents/user_id_username/YYYY/MM/filename"""
     user_id = instance.employee.id
@@ -48,6 +47,7 @@ class User(AbstractUser):
         ADMIN = "admin", "Admin"
         MANAGER = "manager", "Manager"
         EMPLOYEE = "employee", "Employee"
+        EX_EMPLOYEE = "ex_employee", "Ex-Employee"
 
     role = models.CharField(
         max_length=20,
@@ -64,6 +64,7 @@ class User(AbstractUser):
     )
     department = models.CharField(max_length=128, blank=True)
     job_title = models.CharField(max_length=128, blank=True)
+    dark_mode = models.BooleanField(default=False, help_text="Enable dark mode for user interface")
 
     objects = UserManager()
 
@@ -249,6 +250,8 @@ class EmployeeSkill(models.Model):
     certification = models.CharField(max_length=200, blank=True)
     certification_date = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
     
     class Meta:
         ordering = ['-years_of_experience', 'skill_name']
@@ -257,6 +260,58 @@ class EmployeeSkill(models.Model):
     
     def __str__(self):
         return f"{self.employee.get_full_name()} - {self.skill_name}"
+    
+    @property
+    def is_expired(self):
+        if self.expiry_date:
+            return self.expiry_date < timezone.now().date()
+        return False
+    
+    @property
+    def is_expiring_soon(self):
+        if self.expiry_date:
+            days_until_expiry = (self.expiry_date - timezone.now().date()).days
+            return 0 <= days_until_expiry <= 30
+        return False
+
+
+class Certification(models.Model):
+    """Professional certifications with expiry tracking"""
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='certifications')
+    certification_name = models.CharField(max_length=200)
+    certification_number = models.CharField(max_length=100, blank=True)
+    issuing_organization = models.CharField(max_length=200)
+    issue_date = models.DateField()
+    expiry_date = models.DateField()
+    certificate_file = models.FileField(upload_to='certifications/', null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-expiry_date']
+        verbose_name = "Certification"
+        verbose_name_plural = "Certifications"
+        indexes = [
+            models.Index(fields=['employee', 'expiry_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.employee.get_full_name()} - {self.certification_name}"
+    
+    @property
+    def is_expired(self):
+        return self.expiry_date < timezone.now().date()
+    
+    @property
+    def is_expiring_soon(self):
+        days_until_expiry = (self.expiry_date - timezone.now().date()).days
+        return 0 <= days_until_expiry <= 30
+    
+    @property
+    def days_until_expiry(self):
+        return (self.expiry_date - timezone.now().date()).days
 
 
 class EmployeeAsset(models.Model):
@@ -309,7 +364,7 @@ class EmployeeAsset(models.Model):
 
 class Notification(models.Model):
     """Notification system for users"""
-    
+
     class NotificationType(models.TextChoices):
         LEAVE_REQUEST = 'leave_request', 'Leave Request'
         LEAVE_APPROVED = 'leave_approved', 'Leave Approved'
@@ -323,7 +378,7 @@ class Notification(models.Model):
         INTERVENTION_NEW = 'intervention_new', 'New Intervention'
         INTERVENTION_STATUS_CHANGE = 'intervention_status_change', 'Intervention Status Change'
         SYSTEM = 'system', 'System'
-    
+
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     notification_type = models.CharField(max_length=50, choices=NotificationType.choices)
     title = models.CharField(max_length=200)
@@ -331,7 +386,7 @@ class Notification(models.Model):
     link = models.CharField(max_length=500, blank=True, help_text='URL to redirect when notification is clicked')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Notification'
@@ -340,6 +395,193 @@ class Notification(models.Model):
             models.Index(fields=['recipient', 'is_read']),
             models.Index(fields=['-created_at']),
         ]
-    
+
     def __str__(self):
         return f"{self.recipient.get_full_name()} - {self.title}"
+
+
+class Announcement(models.Model):
+    """Announcement/Notice board with priority levels"""
+
+    class Priority(models.TextChoices):
+        LOW = 'low', 'Low'
+        MEDIUM = 'medium', 'Medium'
+        HIGH = 'high', 'High'
+        URGENT = 'urgent', 'Urgent'
+
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    priority = models.CharField(
+        max_length=20,
+        choices=Priority.choices,
+        default=Priority.MEDIUM
+    )
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='announcements')
+    target_audience = models.CharField(
+        max_length=20,
+        choices=[
+            ('all', 'All Users'),
+            ('staff', 'Staff Only'),
+            ('managers', 'Managers Only'),
+            ('admin', 'Admin Only'),
+        ],
+        default='all'
+    )
+    is_active = models.BooleanField(default=True)
+    start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField(null=True, blank=True, help_text='Leave blank for no expiry')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-priority', '-created_at']
+        verbose_name = 'Announcement'
+        verbose_name_plural = 'Announcements'
+        indexes = [
+            models.Index(fields=['-priority', '-created_at']),
+            models.Index(fields=['is_active', 'start_date', 'end_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_priority_display()})"
+
+    @property
+    def is_current(self):
+        """Check if announcement is currently active based on dates"""
+        now = timezone.now()
+        if self.start_date > now:
+            return False
+        if self.end_date and self.end_date < now:
+            return False
+        return self.is_active
+
+
+class Message(models.Model):
+    """Internal messaging system between employees"""
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    subject = models.CharField(max_length=200)
+    body = models.TextField()
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    parent_message = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Message'
+        verbose_name_plural = 'Messages'
+        indexes = [
+            models.Index(fields=['sender', 'recipient']),
+            models.Index(fields=['recipient', 'is_read']),
+            models.Index(fields=['-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.sender.get_full_name()} to {self.recipient.get_full_name()}: {self.subject}"
+
+    def mark_as_read(self):
+        """Mark message as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+    @property
+    def is_reply(self):
+        """Check if this is a reply to another message"""
+        return self.parent_message is not None
+
+
+class Widget(models.Model):
+    """Customizable dashboard widgets for different user roles"""
+    class WidgetType(models.TextChoices):
+        ATTENDANCE = "attendance", "Attendance Stats"
+        ASSIGNMENTS = "assignments", "Recent Assignments"
+        ANNOUNCEMENTS = "announcements", "Announcements"
+        MESSAGES = "messages", "Unread Messages"
+        LEAVE = "leave", "Leave Balance"
+        NOTIFICATIONS = "notifications", "Notifications"
+        QUICK_ACTIONS = "quick_actions", "Quick Actions"
+        CALENDAR = "calendar", "Calendar"
+
+    name = models.CharField(max_length=100)
+    widget_type = models.CharField(max_length=50, choices=WidgetType.choices)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, default="bi-grid")
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0, help_text="Display order on dashboard")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = "Widget"
+        verbose_name_plural = "Widgets"
+
+    def __str__(self):
+        return self.name
+
+
+class UserWidget(models.Model):
+    """User-specific widget configuration"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_widgets')
+    widget = models.ForeignKey(Widget, on_delete=models.CASCADE, related_name='user_configs')
+    is_enabled = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = ['user', 'widget']
+        verbose_name = "User Widget"
+        verbose_name_plural = "User Widgets"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.widget.name}"
+
+
+class QuickAction(models.Model):
+    """Quick actions that can be added to the dashboard"""
+    class ActionType(models.TextChoices):
+        LINK = "link", "External Link"
+        PAGE = "page", "Internal Page"
+        FUNCTION = "function", "JavaScript Function"
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    action_type = models.CharField(max_length=50, choices=ActionType.choices)
+    url = models.URLField(blank=True, help_text="For link and page actions")
+    icon = models.CharField(max_length=50, default="bi-lightning")
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = "Quick Action"
+        verbose_name_plural = "Quick Actions"
+
+    def __str__(self):
+        return self.name
+
+
+class UserQuickAction(models.Model):
+    """User-specific quick action configuration"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_quick_actions')
+    quick_action = models.ForeignKey(QuickAction, on_delete=models.CASCADE, related_name='user_configs')
+    is_enabled = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = ['user', 'quick_action']
+        verbose_name = "User Quick Action"
+        verbose_name_plural = "User Quick Actions"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.quick_action.name}"

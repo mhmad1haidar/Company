@@ -253,18 +253,72 @@ function loadSitesData() {
 function initMap() {
     // Initialize map centered on Italy
     map = L.map('googleMap').setView([41.9028, 12.4964], 6);
-    
-    // Use Stadia Maps with satellite style
-    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}.png?api_key=f2925937-fc75-43cf-b7e8-a74622b34643', {
-        attribution: '&copy; Stadia Maps &copy; OpenStreetMap contributors',
-        maxZoom: 19,
-        // Add performance optimizations
-        updateWhenIdle: true,
-        updateWhenZooming: false
-    }).addTo(map);
-    
-    // Hide loading overlay
-    document.getElementById('mapLoading').style.display = 'none';
+
+    // Try multiple tile providers with fallback
+    const tileProviders = [
+        // OpenStreetMap (primary)
+        {
+            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        },
+        // CartoDB Positron (fallback)
+        {
+            url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        },
+        // OpenTopoMap (fallback)
+        {
+            url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+        }
+    ];
+
+    let currentProviderIndex = 0;
+    let tileLayer = null;
+
+    function loadTileLayer() {
+        if (currentProviderIndex >= tileProviders.length) {
+            // All providers failed, show error message
+            document.getElementById('mapLoading').innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #dc3545; margin-bottom: 15px; display: block;"></i>
+                    <p style="color: #dc3545; font-weight: 600;">Unable to load map tiles</p>
+                    <p style="color: #6c757d; font-size: 14px;">Please check your internet connection or try again later</p>
+                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 10px;">Reload Page</button>
+                </div>
+            `;
+            return;
+        }
+
+        const provider = tileProviders[currentProviderIndex];
+        if (tileLayer) {
+            map.removeLayer(tileLayer);
+        }
+
+        tileLayer = L.tileLayer(provider.url, {
+            attribution: provider.attribution,
+            maxZoom: 19,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+        });
+
+        tileLayer.addTo(map);
+
+        // Try loading a tile to check if provider works
+        tileLayer.on('tileerror', function() {
+            console.log(`Tile provider ${currentProviderIndex + 1} failed, trying next...`);
+            currentProviderIndex++;
+            loadTileLayer();
+        });
+
+        tileLayer.on('load', function() {
+            console.log(`Tile provider ${currentProviderIndex + 1} loaded successfully`);
+            document.getElementById('mapLoading').style.display = 'none';
+        });
+    }
+
+    loadTileLayer();
 }
 
 // Clear sites data (admin only)

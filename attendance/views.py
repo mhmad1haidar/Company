@@ -42,11 +42,11 @@ class AttendanceCheckInView(LoginRequiredMixin, View):
             messages.error(request, str(exc))
         except DjangoValidationError as exc:
             messages.error(request, str(exc))
-        except Exception:
+        except Exception as exc:
             logger.exception("Unexpected error during check-in")
             messages.error(
                 request,
-                "Check-in could not be completed. Please try again.",
+                f"Check-in error: {str(exc)}",
             )
         return redirect("attendance:attendance_dashboard")
 
@@ -72,11 +72,11 @@ class AttendanceCheckOutView(LoginRequiredMixin, View):
             messages.error(request, str(exc))
         except DjangoValidationError as exc:
             messages.error(request, str(exc))
-        except Exception:
+        except Exception as exc:
             logger.exception("Unexpected error during check-out")
             messages.error(
                 request,
-                "Check-out could not be completed. Please try again.",
+                f"Check-out error: {str(exc)}",
             )
         return redirect("attendance:attendance_dashboard")
 
@@ -422,8 +422,11 @@ class AttendanceDashboardView(LoginRequiredMixin, TemplateView):
         # Import models here to avoid circular imports
         from .models import Attendance
         
+        # Get the most recent attendance record for today
         context["today_attendance"] = (
-            Attendance.objects.filter(user=self.request.user, date=today).first()
+            Attendance.objects.filter(user=self.request.user, date=today)
+            .order_by('-check_in')
+            .first()
         )
         
         # Check if user has an active check-in (checked in but not checked out)
@@ -445,7 +448,7 @@ class AttendanceDashboardView(LoginRequiredMixin, TemplateView):
         # Add recent attendance for current user
         context["recent_attendance"] = Attendance.objects.filter(
             user=self.request.user
-        ).order_by('-date')[:10]
+        ).order_by('-date', '-check_in')[:10]
         
         return context
 

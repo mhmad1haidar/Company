@@ -20,8 +20,27 @@ urlpatterns = [
     path("notifications/count/", views.NotificationCountView.as_view(), name="notification-count"),
     path("notifications/recent/", views.RecentNotificationsView.as_view(), name="recent-notifications"),
     
+    # Dark mode toggle
+    path("toggle-dark-mode/", views.toggle_dark_mode, name="toggle-dark-mode"),
+
+    # Announcements
+    path("announcements/", views.AnnouncementListView.as_view(), name="announcement-list"),
+    path("announcements/<int:pk>/", views.AnnouncementDetailView.as_view(), name="announcement-detail"),
+    path("announcements/create/", views.AnnouncementCreateView.as_view(), name="announcement-create"),
+    path("announcements/<int:pk>/edit/", views.AnnouncementUpdateView.as_view(), name="announcement-update"),
+    path("announcements/<int:pk>/delete/", views.AnnouncementDeleteView.as_view(), name="announcement-delete"),
+    path("announcements/dashboard/", views.AnnouncementDashboardView.as_view(), name="announcement-dashboard"),
+
+    # Messages
+    path("messages/inbox/", views.MessageInboxView.as_view(), name="message-inbox"),
+    path("messages/sent/", views.MessageSentView.as_view(), name="message-sent"),
+    path("messages/<int:pk>/", views.MessageDetailView.as_view(), name="message-detail"),
+    path("messages/compose/", views.MessageComposeView.as_view(), name="message-compose"),
+    path("messages/<int:pk>/reply/", views.MessageReplyView.as_view(), name="message-reply"),
+    
     # Employee management
     path("employees/", views_employee.employee_list, name="employee-list"),
+    path("employees/archive/", views_employee.employee_archive, name="employee-archive"),
     path("employees/create/", views_employee.employee_create, name="employee-create"),
     path("employees/<int:pk>/", views_employee.employee_detail, name="employee-detail"),
     path("employees/<int:pk>/edit/", views_employee.employee_edit, name="employee-edit"),

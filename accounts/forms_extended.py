@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
-from .models import EmployeeProfile, EmployeeDocument, EmployeeSkill, EmployeeAsset, Department
+from .models import EmployeeProfile, EmployeeDocument, EmployeeSkill, EmployeeAsset, Department, Certification
 
 User = get_user_model()
 
@@ -40,38 +40,35 @@ class EmployeeCreateForm(UserCreationForm):
         self.fields['last_name'].label = 'Last Name'
         self.fields['role'].label = 'Role'
         self.fields['employee_id'].label = 'Employee ID'
-        self.fields['department'].label = 'Department'
         self.fields['job_title'].label = 'Job Title'
         self.fields['is_staff'].label = 'Staff Access (can manage employees)'
         self.fields['is_active'].label = 'Active Account'
+    
+    def save(self, commit=True):
+        employee = super().save(commit=False)
+        # For create form, set default role if not specified
+        if not employee.role:
+            employee.role = User.Role.EMPLOYEE
+        if commit:
+            employee.save()
+        return employee
 
 
 class EmployeeEditForm(forms.ModelForm):
     """Form for editing existing employees"""
     
-    department = forms.ModelChoiceField(
-        queryset=Department.objects.all(),
-        required=False,
-        empty_label="Select Department",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    role = forms.ChoiceField(
-        choices=User.Role.choices,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
     class Meta:
         model = User
         fields = [
             'username', 'email', 'first_name', 'last_name',
-            'employee_id', 'job_title', 'is_staff', 'is_superuser', 'is_active'
+            'role', 'employee_id', 'job_title', 'is_staff', 'is_superuser', 'is_active'
         ]
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
             'employee_id': forms.TextInput(attrs={'class': 'form-control'}),
             'job_title': forms.TextInput(attrs={'class': 'form-control'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -89,11 +86,39 @@ class EmployeeEditForm(forms.ModelForm):
         self.fields['last_name'].label = 'Last Name'
         self.fields['role'].label = 'Role'
         self.fields['employee_id'].label = 'Employee ID'
-        self.fields['department'].label = 'Department'
         self.fields['job_title'].label = 'Job Title'
         self.fields['is_staff'].label = 'Staff Access (can manage employees)'
         self.fields['is_superuser'].label = 'Superuser (full admin access)'
         self.fields['is_active'].label = 'Active Account'
+    
+    def save(self, commit=True):
+        employee = super().save(commit=False)
+        
+        # Handle role-based activation/deactivation
+        if employee.role == User.Role.EX_EMPLOYEE:
+            # Deactivate when role is ex_employee
+            employee.is_active = False
+            employee.is_staff = False
+            employee.is_superuser = False
+        elif self.instance.pk and self.instance.role == User.Role.EX_EMPLOYEE and employee.role != User.Role.EX_EMPLOYEE:
+            # Reactivate when changing from ex_employee to another role
+            employee.is_active = True
+        elif self.instance.pk and self.instance.role != User.Role.EX_EMPLOYEE and employee.role == User.Role.EX_EMPLOYEE:
+            # Deactivate when changing to ex_employee
+            employee.is_active = False
+            employee.is_staff = False
+            employee.is_superuser = False
+        elif self.instance.pk and employee.role in [User.Role.EMPLOYEE, User.Role.MANAGER, User.Role.ADMIN] and employee.is_active == False:
+            # Auto-activate when role is set to an active role
+            employee.is_active = True
+        
+        # Handle manual is_active toggle - if user manually activates an ex-employee, change role to employee
+        if self.instance.pk and self.instance.is_active == False and employee.is_active == True and employee.role == User.Role.EX_EMPLOYEE:
+            employee.role = User.Role.EMPLOYEE
+        
+        if commit:
+            employee.save()
+        return employee
 
 
 class EmployeeProfileForm(forms.ModelForm):
@@ -182,7 +207,7 @@ class EmployeeSkillForm(forms.ModelForm):
     
     class Meta:
         model = EmployeeSkill
-        fields = ['skill_name', 'skill_level', 'years_of_experience', 'certification', 'certification_date', 'expiry_date']
+        fields = ['skill_name', 'skill_level', 'years_of_experience', 'certification', 'certification_date', 'expiry_date', 'is_verified', 'notes']
         widgets = {
             'skill_name': forms.TextInput(attrs={'class': 'form-control'}),
             'skill_level': forms.Select(attrs={'class': 'form-control'}),
@@ -190,6 +215,8 @@ class EmployeeSkillForm(forms.ModelForm):
             'certification': forms.TextInput(attrs={'class': 'form-control'}),
             'certification_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'expiry_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'is_verified': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -200,6 +227,37 @@ class EmployeeSkillForm(forms.ModelForm):
         self.fields['certification'].label = 'Certification (if any)'
         self.fields['certification_date'].label = 'Certification Date'
         self.fields['expiry_date'].label = 'Certification Expiry Date'
+        self.fields['is_verified'].label = 'Verified'
+        self.fields['notes'].label = 'Notes'
+
+
+class CertificationForm(forms.ModelForm):
+    """Form for managing professional certifications"""
+    
+    class Meta:
+        model = Certification
+        fields = ['certification_name', 'certification_number', 'issuing_organization', 'issue_date', 'expiry_date', 'certificate_file', 'is_active', 'notes']
+        widgets = {
+            'certification_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'certification_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'issuing_organization': forms.TextInput(attrs={'class': 'form-control'}),
+            'issue_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'expiry_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'certificate_file': forms.FileInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['certification_name'].label = 'Certification Name *'
+        self.fields['certification_number'].label = 'Certification Number'
+        self.fields['issuing_organization'].label = 'Issuing Organization *'
+        self.fields['issue_date'].label = 'Issue Date *'
+        self.fields['expiry_date'].label = 'Expiry Date *'
+        self.fields['certificate_file'].label = 'Certificate File'
+        self.fields['is_active'].label = 'Active'
+        self.fields['notes'].label = 'Notes'
 
 
 class EmployeeAssetForm(forms.ModelForm):

@@ -138,19 +138,6 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label class="form-label">{{ basic_form.department.label }}</label>
-                                            {{ basic_form.department }}
-                                            {% if basic_form.department.errors %}
-                                            <div class="text-danger small">
-                                                {% for error in basic_form.department.errors %}
-                                                    {{ error }}
-                                                {% endfor %}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
                                             <label class="form-label">{{ basic_form.job_title.label }}</label>
                                             {{ basic_form.job_title }}
                                             {% if basic_form.job_title.errors %}

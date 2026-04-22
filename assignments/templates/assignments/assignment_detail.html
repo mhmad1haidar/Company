@@ -247,12 +247,6 @@
                 </div>
                 <div class="card-body-modern">
                     <div class="d-grid gap-2">
-                        {% if assignment.status != 'completed' and request.user in assignment.assigned_to.all %}
-                        <button type="button" class="btn btn-success-modern" data-bs-toggle="modal" data-bs-target="#completeModal">
-                            <i class="bi bi-check-circle me-2"></i>
-                            Mark as Completed
-                        </button>
-                        {% endif %}
                         {% if assignment.site_address %}
                         <a href="{{ assignment.get_directions_url }}" target="_blank" class="btn btn-primary-modern">
                             <i class="bi bi-directions me-2"></i>

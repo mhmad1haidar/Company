@@ -330,27 +330,44 @@ class LeaveDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         
         # Get today's attendance
         today_attendance = Attendance.objects.filter(date=today).select_related('user')
-        checked_in_attendance = today_attendance.filter(check_in__isnull=False, check_out__isnull=True)
-        checked_out_attendance = today_attendance.filter(check_out__isnull=False)
-        checked_in_users = today_attendance.filter(check_in__isnull=False).values_list('user_id', flat=True)
-        checked_out_users = today_attendance.filter(check_out__isnull=False).values_list('user_id', flat=True)
+        
+        # Currently checked in (checked in but not checked out) - count unique users
+        currently_checked_in_user_ids = today_attendance.filter(
+            check_in__isnull=False, 
+            check_out__isnull=True
+        ).values_list('user_id', flat=True).distinct()
+        currently_checked_in_count = len(set(currently_checked_in_user_ids))
+        
+        # Checked out (have checked out) - count unique users
+        checked_out_user_ids = today_attendance.filter(
+            check_out__isnull=False
+        ).values_list('user_id', flat=True).distinct()
+        checked_out_count = len(set(checked_out_user_ids))
         
         # Get all active users
         all_active_users = User.objects.filter(is_active=True)
         
+        # Users who have checked in at all today (regardless of check-out status)
+        users_with_check_in_today = today_attendance.filter(
+            check_in__isnull=False
+        ).values_list('user_id', flat=True).distinct()
+        
         # Calculate attendance stats
         total_users = all_active_users.count()
-        checked_in_count = len(set(checked_in_users))
-        checked_out_count = len(set(checked_out_users))
-        not_checked_in_count = total_users - checked_in_count
+        users_with_check_in_count = len(set(users_with_check_in_today))
+        not_checked_in_count = total_users - users_with_check_in_count
         
         # Get employee lists for the stat cards
-        checked_in_employees = checked_in_attendance
-        checked_out_employees = checked_out_attendance
+        currently_checked_in_employees = today_attendance.filter(
+            check_in__isnull=False, 
+            check_out__isnull=True
+        )
+        checked_out_employees = today_attendance.filter(
+            check_out__isnull=False
+        )
         
-        # Get users who haven't checked in today
-        checked_in_user_ids = set(checked_in_users)
-        not_checked_in_employees = all_active_users.exclude(id__in=checked_in_user_ids)
+        # Get users who haven't checked in today (no attendance record or no check-in)
+        not_checked_in_employees = all_active_users.exclude(id__in=users_with_check_in_today)
         
         # Get recent attendance records
         recent_attendance = Attendance.objects.select_related('user').order_by('-date', '-check_in')[:10]
@@ -365,10 +382,10 @@ class LeaveDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
             "leave_types": LeaveType.objects.all(),
             # Attendance data
             "total_users": total_users,
-            "checked_in_count": checked_in_count,
+            "checked_in_count": currently_checked_in_count,
             "checked_out_count": checked_out_count,
             "not_checked_in_count": not_checked_in_count,
-            "checked_in_employees": checked_in_employees,
+            "checked_in_employees": currently_checked_in_employees,
             "checked_out_employees": checked_out_employees,
             "not_checked_in_employees": not_checked_in_employees,
             "recent_attendance": recent_attendance,
@@ -399,7 +416,7 @@ class LeaveApproveActionView(LoginRequiredMixin, UserPassesTestMixin, View):
             notification_type=Notification.NotificationType.LEAVE_APPROVED,
             title="Leave Request Approved",
             message=f"Your {leave.leave_type.name} leave from {leave.start_date} to {leave.end_date} has been approved.",
-            link="/leave/my-leaves/"
+            link="/leave/"
         )
         
         # Check if this is an AJAX request
@@ -440,7 +457,7 @@ class LeaveRejectActionView(LoginRequiredMixin, UserPassesTestMixin, View):
             notification_type=Notification.NotificationType.LEAVE_REJECTED,
             title="Leave Request Rejected",
             message=f"Your {leave.leave_type.name} leave from {leave.start_date} to {leave.end_date} has been rejected.",
-            link="/leave/my-leaves/"
+            link="/leave/"
         )
         
         # Check if this is an AJAX request

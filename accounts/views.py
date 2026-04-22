@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
+from django.db import models
 from django.db.models import Q, Count, Sum, Avg, F
 from django.db.models.functions import TruncDate, TruncMonth
 from django.http import JsonResponse
@@ -14,10 +15,13 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView
 from django.views.generic.edit import FormView
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
 
 from attendance.models import Attendance
 
-from .models import Notification
+from .models import Notification, Announcement, Message, Widget, UserWidget, QuickAction, UserQuickAction
 
 User = get_user_model()
 
@@ -91,6 +95,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         
         # Real data from existing apps
         context["total_employees"] = User.objects.filter(is_active=True).count()
+        context["inactive_employees"] = User.objects.filter(is_active=False).count()
         
         # Fleet statistics (from fleet app)
         try:
@@ -247,6 +252,20 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context["user_assigned"] = 0
             context["show_all_users"] = False
         
+        # Load user's enabled widgets
+        user_widgets = UserWidget.objects.filter(
+            user=self.request.user,
+            is_enabled=True
+        ).select_related('widget').order_by('order')
+        context['user_widgets'] = user_widgets
+        
+        # Load user's enabled quick actions
+        user_quick_actions = UserQuickAction.objects.filter(
+            user=self.request.user,
+            is_enabled=True
+        ).select_related('quick_action').order_by('order')
+        context['user_quick_actions'] = user_quick_actions
+        
         return context
 
 
@@ -301,12 +320,12 @@ class NotificationCountView(LoginRequiredMixin, View):
 
 class RecentNotificationsView(LoginRequiredMixin, View):
     """Get recent notifications for dropdown"""
-    
+
     def get(self, request):
         notifications = Notification.objects.filter(
             recipient=request.user
         ).order_by('-created_at')[:5]
-        
+
         data = []
         for notification in notifications:
             data.append({
@@ -314,8 +333,241 @@ class RecentNotificationsView(LoginRequiredMixin, View):
                 'title': notification.title,
                 'message': notification.message,
                 'is_read': notification.is_read,
-                'created_at': notification.created_at.strftime('%b %d, %H:%M'),
-                'link': notification.link
+                'created_at': notification.created_at.strftime('%Y-%m-%d %H:%M')
             })
-        
+
         return JsonResponse({'notifications': data})
+
+
+@require_http_methods(["POST"])
+@login_required
+def toggle_dark_mode(request):
+    """Toggle dark mode preference for user"""
+    try:
+        data = json.loads(request.body)
+        dark_mode = data.get('dark_mode', False)
+
+        request.user.dark_mode = dark_mode
+        request.user.save()
+
+        return JsonResponse({'success': True, 'dark_mode': dark_mode})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+class AnnouncementListView(LoginRequiredMixin, ListView):
+    """List all announcements for the current user"""
+    model = Announcement
+    template_name = 'accounts/announcement_list.html'
+    context_object_name = 'announcements'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = Announcement.objects.filter(
+            is_active=True,
+            start_date__lte=timezone.now()
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=timezone.now())
+        )
+
+        # Filter by target audience
+        user = self.request.user
+        if user.is_superuser or user.role == User.Role.ADMIN:
+            pass  # Admins see all
+        elif user.is_staff or user.role == User.Role.MANAGER:
+            queryset = queryset.filter(target_audience__in=['all', 'staff', 'managers'])
+        else:
+            queryset = queryset.filter(target_audience='all')
+
+        return queryset.select_related('author')
+
+
+class AnnouncementDetailView(LoginRequiredMixin, DetailView):
+    """View announcement details"""
+    model = Announcement
+    template_name = 'accounts/announcement_detail.html'
+    context_object_name = 'announcement'
+
+
+class AnnouncementCreateView(LoginRequiredMixin, CreateView):
+    """Create a new announcement (admin/staff only)"""
+    model = Announcement
+    template_name = 'accounts/announcement_form.html'
+    fields = ['title', 'content', 'priority', 'target_audience', 'is_active', 'start_date', 'end_date']
+    success_url = reverse_lazy('accounts:announcement-list')
+
+    def dispatch(self, request, *args, **kwargs):
+        if not (request.user.is_staff or request.user.is_superuser):
+            return redirect('accounts:announcement-list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        messages.success(self.request, 'Announcement created successfully')
+        return super().form_valid(form)
+
+
+class AnnouncementUpdateView(LoginRequiredMixin, UpdateView):
+    """Update an existing announcement (author or admin only)"""
+    model = Announcement
+    template_name = 'accounts/announcement_form.html'
+    fields = ['title', 'content', 'priority', 'target_audience', 'is_active', 'start_date', 'end_date']
+    success_url = reverse_lazy('accounts:announcement-list')
+
+    def dispatch(self, request, *args, **kwargs):
+        announcement = self.get_object()
+        if request.user != announcement.author and not request.user.is_superuser:
+            return redirect('accounts:announcement-list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Announcement updated successfully')
+        return super().form_valid(form)
+
+
+class AnnouncementDeleteView(LoginRequiredMixin, View):
+    """Delete an announcement (author or admin only)"""
+
+    def post(self, request, pk):
+        announcement = get_object_or_404(Announcement, pk=pk)
+        if request.user == announcement.author or request.user.is_superuser:
+            announcement.delete()
+            messages.success(request, 'Announcement deleted successfully')
+        else:
+            messages.error(request, 'You do not have permission to delete this announcement')
+        return redirect('accounts:announcement-list')
+
+
+class AnnouncementDashboardView(LoginRequiredMixin, View):
+    """Get active announcements for dashboard widget"""
+
+    def get(self, request):
+        queryset = Announcement.objects.filter(
+            is_active=True,
+            start_date__lte=timezone.now()
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=timezone.now())
+        )
+
+        # Filter by target audience
+        user = request.user
+        if user.is_superuser or user.role == User.Role.ADMIN:
+            pass
+        elif user.is_staff or user.role == User.Role.MANAGER:
+            queryset = queryset.filter(target_audience__in=['all', 'staff', 'managers'])
+        else:
+            queryset = queryset.filter(target_audience='all')
+
+        announcements = queryset.order_by('-priority', '-created_at')[:5]
+
+        data = []
+        for announcement in announcements:
+            data.append({
+                'id': announcement.id,
+                'title': announcement.title,
+                'content': announcement.content[:200] + '...' if len(announcement.content) > 200 else announcement.content,
+                'priority': announcement.priority,
+                'priority_display': announcement.get_priority_display(),
+                'author': announcement.author.get_full_name(),
+                'created_at': announcement.created_at.strftime('%Y-%m-%d %H:%M'),
+            })
+
+        return JsonResponse({'announcements': data})
+
+
+class MessageInboxView(LoginRequiredMixin, ListView):
+    """View received messages (inbox)"""
+    model = Message
+    template_name = 'accounts/message_inbox.html'
+    context_object_name = 'messages'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Message.objects.filter(
+            recipient=self.request.user
+        ).select_related('sender').order_by('-created_at')
+
+
+class MessageSentView(LoginRequiredMixin, ListView):
+    """View sent messages"""
+    model = Message
+    template_name = 'accounts/message_sent.html'
+    context_object_name = 'messages'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Message.objects.filter(
+            sender=self.request.user
+        ).select_related('recipient').order_by('-created_at')
+
+
+class MessageDetailView(LoginRequiredMixin, DetailView):
+    """View message details"""
+    model = Message
+    template_name = 'accounts/message_detail.html'
+    context_object_name = 'message'
+
+    def get_queryset(self):
+        return Message.objects.filter(
+            models.Q(sender=self.request.user) | models.Q(recipient=self.request.user)
+        ).select_related('sender', 'recipient')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        message = self.object
+
+        # Mark as read if the current user is the recipient
+        if message.recipient == self.request.user and not message.is_read:
+            message.mark_as_read()
+
+        # Get replies
+        context['replies'] = message.replies.all().select_related('sender', 'recipient')
+
+        return context
+
+
+class MessageComposeView(LoginRequiredMixin, CreateView):
+    """Compose a new message"""
+    model = Message
+    template_name = 'accounts/message_form.html'
+    fields = ['recipient', 'subject', 'body']
+    success_url = reverse_lazy('accounts:message-inbox')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['recipient'].queryset = User.objects.filter(is_active=True).exclude(pk=self.request.user.pk)
+        return form
+
+    def form_valid(self, form):
+        form.instance.sender = self.request.user
+        messages.success(self.request, 'Message sent successfully')
+        return super().form_valid(form)
+
+
+class MessageReplyView(LoginRequiredMixin, CreateView):
+    """Reply to a message"""
+    model = Message
+    template_name = 'accounts/message_form.html'
+    fields = ['recipient', 'subject', 'body']
+
+    def dispatch(self, request, *args, **kwargs):
+        parent_message = get_object_or_404(Message, pk=kwargs['pk'])
+        if request.user not in [parent_message.sender, parent_message.recipient]:
+            return redirect('accounts:message-inbox')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_initial(self):
+        parent_message = get_object_or_404(Message, pk=self.kwargs['pk'])
+        return {
+            'recipient': parent_message.sender if parent_message.recipient == self.request.user else parent_message.recipient,
+            'subject': f'Re: {parent_message.subject}',
+        }
+
+    def form_valid(self, form):
+        form.instance.sender = self.request.user
+        form.instance.parent_message_id = self.kwargs['pk']
+        messages.success(self.request, 'Reply sent successfully')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('accounts:message-detail', kwargs={'pk': self.kwargs['pk']})

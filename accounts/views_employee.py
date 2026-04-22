@@ -31,7 +31,8 @@ def employee_list(request):
     department_filter = request.GET.get('department', '')
     role_filter = request.GET.get('role', '')
     
-    employees = User.objects.filter(is_active=True).select_related('profile').order_by('first_name', 'last_name')
+    # Exclude ex-employees from the active employees list
+    employees = User.objects.filter(is_active=True).exclude(role=User.Role.EX_EMPLOYEE).select_related('profile').order_by('first_name', 'last_name')
     
     # Apply filters
     if search_query:
@@ -66,6 +67,51 @@ def employee_list(request):
         'role_filter': role_filter,
         'departments': departments,
         'roles': User.Role.choices,
+        'inactive_employees': User.objects.filter(is_active=False, is_superuser=False).count(),
+    }
+    return render(request, 'accounts/employee_list.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser_or_staff)
+def employee_archive(request):
+    """View for listing archived employees (ex-employees)"""
+    search_query = request.GET.get('search', '')
+    department_filter = request.GET.get('department', '')
+    
+    # Get inactive employees (is_active=False)
+    archived_employees = User.objects.filter(is_active=False, is_superuser=False).select_related('profile').order_by('first_name', 'last_name')
+    
+    # Apply filters
+    if search_query:
+        archived_employees = archived_employees.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(employee_id__icontains=search_query)
+        )
+    
+    if department_filter:
+        archived_employees = archived_employees.filter(department__icontains=department_filter)
+    
+    # Pagination
+    paginator = Paginator(archived_employees, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Get departments for filter dropdown
+    departments = User.objects.values_list('department', flat=True).distinct()
+    departments = [dept for dept in departments if dept]
+    
+    context = {
+        'title': 'Employee Archive',
+        'employees': page_obj,
+        'search_query': search_query,
+        'department_filter': department_filter,
+        'departments': departments,
+        'is_archive': True,
+        'inactive_employees': archived_employees.count(),
     }
     return render(request, 'accounts/employee_list.html', context)
 
