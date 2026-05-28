@@ -22,6 +22,10 @@
                 <i class="bi bi-person-plus me-2"></i>
                 Assign Work
             </a>
+            <a href="{% url 'interventions:corrective-report-create' intervention.pk %}" class="btn btn-primary-modern">
+                <i class="bi bi-clipboard-check me-2"></i>
+                Corrective Report
+            </a>
             <button class="btn btn-primary-modern directions-btn" 
                     data-intervention-pk="{{ intervention.pk }}" 
                     data-international-code="{{ intervention.international_code|default:"" }}"
@@ -414,6 +418,57 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Corrective Reports -->
+    <div class="card-modern mb-4">
+        <div class="card-header-modern d-flex align-items-center justify-content-between">
+            <h5 class="card-title-modern mb-0">
+                <i class="bi bi-clipboard-check me-2"></i>
+                Corrective Reports
+            </h5>
+            <a href="{% url 'interventions:corrective-report-create' intervention.pk %}" class="btn btn-sm btn-primary-modern">
+                <i class="bi bi-plus-circle me-1"></i> New Report
+            </a>
+        </div>
+        <div class="card-body-modern">
+            {% if corrective_reports %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>Submitted</th>
+                            <th>Employee</th>
+                            <th>Status</th>
+                            <th>Performed</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in corrective_reports %}
+                        <tr>
+                            <td>{{ report.submitted_at|date:"d/m/Y H:i"|default:"-" }}</td>
+                            <td>{{ report.reporter.get_full_name|default:report.reporter.username }}</td>
+                            <td><span class="badge bg-primary">{{ report.get_status_display }}</span></td>
+                            <td>{{ report.performed_at|date:"d/m/Y H:i" }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'interventions:corrective-report-detail' report.pk %}" class="btn btn-sm btn-outline-modern">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-clipboard-x"></i>
+                <h5>No corrective report yet</h5>
+                <p>Create the employee report for this intervention.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 

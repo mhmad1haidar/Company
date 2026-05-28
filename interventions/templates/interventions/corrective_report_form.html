@@ -1,0 +1,135 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Corrective Report - {{ intervention.codice_nigit }}{% endblock %}
+
+{% block content %}
+<div class="main-content corrective-report-page">
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Corrective Report</h1>
+            <p>{% if intervention %}{{ intervention.codice_nigit }} - {{ intervention.nome|default:"No intervention name" }}{% else %}Enter Codice NIGIT to auto-fill intervention details.{% endif %}</p>
+        </div>
+        <div class="page-actions">
+            {% if intervention %}
+            <a href="{% url 'interventions:intervention-detail' intervention.pk %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i> Intervention
+            </a>
+            {% else %}
+            <a href="{% url 'interventions:intervention-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i> Interventions
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="card-modern mb-3">
+            <div class="card-header-modern">
+                <h5 class="card-title-modern mb-0"><i class="bi bi-clipboard-check me-2"></i> Work Summary</h5>
+            </div>
+            <div class="card-body-modern">
+                <div class="row">
+                    {% if form.codice_nigit_lookup %}
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="{{ form.codice_nigit_lookup.id_for_label }}">{{ form.codice_nigit_lookup.label }}</label>
+                        <div class="input-group">
+                            {{ form.codice_nigit_lookup }}
+                            <button class="btn btn-outline-modern" type="button" id="lookupCorrectiveCode">
+                                <i class="bi bi-search me-1"></i> Fill
+                            </button>
+                        </div>
+                        <div id="correctiveLookupStatus" class="form-text"></div>
+                        {% for error in form.codice_nigit_lookup.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+                    {% for field in form.visible_fields %}
+                        {% if field.name == "performed_at" or field.name == "fault_found" or field.name == "action_taken" or field.name == "work_summary" or field.name == "customer_notes" or field.name == "internal_notes" %}
+                        <div class="{% if field.name == 'performed_at' %}col-md-4{% else %}col-12{% endif %} mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card-modern">
+            <div class="card-header-modern d-flex align-items-center justify-content-between">
+                <h5 class="card-title-modern mb-0"><i class="bi bi-list-ul me-2"></i> Corrective Report Questions</h5>
+                <span class="badge bg-primary">{{ question_bound_fields|length }} fields</span>
+            </div>
+            <div class="card-body-modern">
+                <div class="corrective-question-grid">
+                    {% for label, field in question_bound_fields %}
+                    <div class="corrective-question {% if 'Materiale' in label or 'Quantità' in label %}is-material{% endif %}">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ label }}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="page-actions mt-4">
+                    <button type="submit" class="btn btn-primary-modern">
+                        <i class="bi bi-send-check me-2"></i> Submit Corrective Report
+                    </button>
+                    {% if intervention %}
+                    <a href="{% url 'interventions:intervention-detail' intervention.pk %}" class="btn btn-outline-modern">Cancel</a>
+                    {% else %}
+                    <a href="{% url 'interventions:intervention-list' %}" class="btn btn-outline-modern">Cancel</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.querySelector('.corrective-code-lookup');
+    const button = document.getElementById('lookupCorrectiveCode');
+    const status = document.getElementById('correctiveLookupStatus');
+    if (!input || !button) return;
+
+    function setReportField(label, value) {
+        const labels = Array.from(document.querySelectorAll('.corrective-question label'));
+        const fieldLabel = labels.find(item => item.textContent.trim() === label);
+        if (!fieldLabel) return;
+        const field = document.getElementById(fieldLabel.getAttribute('for'));
+        if (field) field.value = value || '';
+    }
+
+    function lookupCode() {
+        const code = input.value.trim();
+        if (!code) {
+            status.textContent = 'Enter Codice NIGIT first.';
+            status.className = 'form-text text-warning';
+            return;
+        }
+        status.textContent = 'Searching...';
+        status.className = 'form-text text-muted';
+        fetch(`/interventions/corrective-report/lookup/?codice_nigit=${encodeURIComponent(code)}`)
+            .then(response => {
+                if (!response.ok) throw new Error('not found');
+                return response.json();
+            })
+            .then(data => {
+                Object.entries(data.intervention || {}).forEach(([label, value]) => setReportField(label, value));
+                status.textContent = 'Intervention details filled.';
+                status.className = 'form-text text-success';
+            })
+            .catch(() => {
+                status.textContent = 'No intervention found with this Codice NIGIT.';
+                status.className = 'form-text text-danger';
+            });
+    }
+
+    button.addEventListener('click', lookupCode);
+    input.addEventListener('change', lookupCode);
+});
+</script>
+{% endblock %}

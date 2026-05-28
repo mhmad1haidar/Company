@@ -1283,6 +1283,81 @@
                 </li>
                 {% endif %}
             </ul>
+
+            <div class="global-quick-nav" id="globalQuickNav">
+                <i class="bi bi-search"></i>
+                <input type="search" id="globalQuickNavInput" placeholder="" autocomplete="off" aria-label="Quick navigation">
+                <div class="global-quick-nav-results" id="globalQuickNavResults">
+                    <a href="{% url 'accounts:dashboard' %}" data-keywords="dashboard home overview">
+                        <span><i class="bi bi-speedometer2"></i> Dashboard</span>
+                        <small>Overview</small>
+                    </a>
+                    {% if request.user|has_module_access:"employees" %}
+                    <a href="{% url 'accounts:employee-list' %}" data-keywords="employees staff people users access control">
+                        <span><i class="bi bi-people"></i> Employees</span>
+                        <small>People</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"warehouse" %}
+                    <a href="{% url 'warehouse:dashboard' %}" data-keywords="warehouse inventory stock items requests movements report export">
+                        <span><i class="bi bi-box-seam"></i> Warehouse</span>
+                        <small>Inventory</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"fleet" %}
+                    <a href="{% url 'fleet:car_list' %}" data-keywords="fleet cars vehicles maintenance">
+                        <span><i class="bi bi-truck"></i> Fleet</span>
+                        <small>Vehicles</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"interventions" %}
+                    <a href="{% url 'interventions:intervention_list' %}" data-keywords="interventions work tickets corrective sites">
+                        <span><i class="bi bi-tools"></i> Interventions</span>
+                        <small>Work</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"sites_map" %}
+                    <a href="{% url 'interventions:sites_map' %}" data-keywords="map sites route directions addresses codice sito">
+                        <span><i class="bi bi-map"></i> Sites Map</span>
+                        <small>Routes</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"assignments" %}
+                    <a href="{% url 'assignments:assignment-list' %}" data-keywords="assignments my work tasks">
+                        <span><i class="bi bi-clipboard-check"></i> Assignments</span>
+                        <small>Tasks</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"leave" %}
+                    <a href="{% url 'leave:leave_list' %}" data-keywords="leave vacation request absence approvals">
+                        <span><i class="bi bi-calendar3"></i> Leave</span>
+                        <small>Requests</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"attendance" %}
+                    <a href="{% url 'attendance:attendance_dashboard' %}" data-keywords="attendance time clock absent late">
+                        <span><i class="bi bi-clock-history"></i> Attendance</span>
+                        <small>Time</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"messages" %}
+                    <a href="{% url 'accounts:message-inbox' %}" data-keywords="messages inbox mail chat communication">
+                        <span><i class="bi bi-envelope"></i> Messages</span>
+                        <small>Inbox</small>
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_module_access:"announcements" %}
+                    <a href="{% url 'accounts:announcement-list' %}" data-keywords="announcements news notice board updates">
+                        <span><i class="bi bi-megaphone"></i> Announcements</span>
+                        <small>News</small>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'accounts:profile' %}" data-keywords="profile account me settings">
+                        <span><i class="bi bi-person-circle"></i> My Profile</span>
+                        <small>Account</small>
+                    </a>
+                </div>
+            </div>
             
             <!-- Actions -->
             <div class="navbar-actions">
@@ -1416,7 +1491,52 @@
             // Refresh notifications every 30 seconds
             setInterval(loadNotifications, 30000);
             setInterval(loadRecentNotifications, 30000);
+
+            setupGlobalQuickNav();
         });
+
+        function setupGlobalQuickNav() {
+            const wrapper = document.getElementById('globalQuickNav');
+            const input = document.getElementById('globalQuickNavInput');
+            const results = document.getElementById('globalQuickNavResults');
+            if (!wrapper || !input || !results) return;
+
+            const links = Array.from(results.querySelectorAll('a'));
+
+            function filterLinks() {
+                const query = input.value.trim().toLowerCase();
+                let visibleCount = 0;
+                links.forEach(link => {
+                    const haystack = `${link.textContent} ${link.dataset.keywords || ''}`.toLowerCase();
+                    const show = !query || haystack.includes(query);
+                    link.hidden = !show;
+                    if (show) visibleCount += 1;
+                });
+                wrapper.classList.toggle('is-open', document.activeElement === input && visibleCount > 0);
+                results.classList.toggle('is-empty', visibleCount === 0);
+            }
+
+            input.addEventListener('focus', filterLinks);
+            input.addEventListener('input', filterLinks);
+            input.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    const firstVisible = links.find(link => !link.hidden);
+                    if (firstVisible) {
+                        window.location.href = firstVisible.href;
+                    }
+                }
+                if (event.key === 'Escape') {
+                    input.value = '';
+                    wrapper.classList.remove('is-open');
+                    input.blur();
+                }
+            });
+            document.addEventListener('click', event => {
+                if (!wrapper.contains(event.target)) {
+                    wrapper.classList.remove('is-open');
+                }
+            });
+        }
         
         function loadNotifications() {
             fetch('/accounts/notifications/count/')
@@ -1433,6 +1553,12 @@
                     }
                 })
                 .catch(error => console.error('Error loading notifications:', error));
+        }
+
+        function escapeNotificationText(value) {
+            const div = document.createElement('div');
+            div.textContent = value || '';
+            return div.innerHTML;
         }
         
         function loadRecentNotifications() {
@@ -1452,12 +1578,20 @@
                                 <li><hr class="dropdown-divider"></li>
                             `;
                             data.notifications.forEach(notification => {
+                                const title = escapeNotificationText(notification.title);
+                                const message = escapeNotificationText(notification.message);
+                                const typeLabel = escapeNotificationText(notification.type_label);
+                                const createdAt = escapeNotificationText(notification.created_at);
+                                const icon = escapeNotificationText(notification.icon || 'bi-bell');
                                 html += `
                                     <li>
-                                        <a class="dropdown-item ${notification.is_read ? 'text-muted' : ''}" href="/accounts/notifications/${notification.id}/" style="display: block; padding: 12px 16px; border-left: 3px solid ${notification.is_read ? 'transparent' : '#4f46e5'};">
-                                            <div style="font-weight: ${notification.is_read ? '400' : '600'}; font-size: 14px; margin-bottom: 4px;">${notification.title}</div>
-                                            <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">${notification.message}</div>
-                                            <div style="font-size: 11px; color: #94a3b8;">${notification.created_at}</div>
+                                        <a class="dropdown-item notification-mini ${notification.is_read ? '' : 'is-unread'}" href="/accounts/notifications/${notification.id}/">
+                                            <span class="notification-mini-icon"><i class="bi ${icon}"></i></span>
+                                            <span>
+                                                <span class="notification-mini-time">${typeLabel} - ${createdAt}</span>
+                                                <span class="notification-mini-title">${title}</span>
+                                                <span class="notification-mini-message">${message}</span>
+                                            </span>
                                         </a>
                                     </li>
                                 `;

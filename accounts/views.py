@@ -259,11 +259,31 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Load user's enabled widgets
         user = self.request.user
         user_role = getattr(user, "role", "")
-        can_manage_people = user.is_superuser or user.is_staff
-        can_manage_leave = user.is_superuser or user.is_staff or user_role in [User.Role.ADMIN, User.Role.MANAGER]
-        can_manage_assignments = user.is_superuser or user.is_staff or user.has_perm('assignments.view_all_assignments')
-        can_manage_interventions = user.is_superuser or user.is_staff or user_role in [User.Role.ADMIN, User.Role.MANAGER]
+        has_access = getattr(user, "has_module_access", None)
+        module_access = {
+            "employees": has_access("employees") if callable(has_access) else user.is_staff,
+            "attendance": has_access("attendance") if callable(has_access) else user.is_staff,
+            "leave": has_access("leave") if callable(has_access) else user.is_staff,
+            "assignments": has_access("assignments") if callable(has_access) else user.is_staff,
+            "warehouse": has_access("warehouse") if callable(has_access) else user.is_staff,
+            "fleet": has_access("fleet") if callable(has_access) else user.is_staff,
+            "interventions": has_access("interventions") if callable(has_access) else user.is_staff,
+            "sites_map": has_access("sites_map") if callable(has_access) else user.is_staff,
+            "messages": has_access("messages") if callable(has_access) else user.is_staff,
+            "announcements": has_access("announcements") if callable(has_access) else user.is_staff,
+        }
+        can_manage_people = module_access["employees"] and (user.is_superuser or user.is_staff)
+        can_manage_leave = module_access["leave"] and (
+            user.is_superuser or user.is_staff or user_role in [User.Role.ADMIN, User.Role.MANAGER]
+        )
+        can_manage_assignments = module_access["assignments"] and (
+            user.is_superuser or user.is_staff or user.has_perm('assignments.view_all_assignments')
+        )
+        can_manage_interventions = module_access["interventions"] and (
+            user.is_superuser or user.is_staff or user_role in [User.Role.ADMIN, User.Role.MANAGER]
+        )
 
+        context["module_access"] = module_access
         context["can_manage_people"] = can_manage_people
         context["can_manage_leave"] = can_manage_leave
         context["can_manage_assignments"] = can_manage_assignments
@@ -363,6 +383,9 @@ class RecentNotificationsView(LoginRequiredMixin, View):
                 'id': notification.id,
                 'title': notification.title,
                 'message': notification.message,
+                'type_label': notification.get_notification_type_display(),
+                'category': notification.category_class,
+                'icon': notification.icon_class,
                 'is_read': notification.is_read,
                 'created_at': notification.created_at.strftime('%Y-%m-%d %H:%M')
             })
@@ -447,7 +470,7 @@ class AnnouncementCreateView(LoginRequiredMixin, CreateView):
         Notification.objects.bulk_create([
             Notification(
                 recipient=user,
-                notification_type=Notification.NotificationType.SYSTEM,
+                notification_type=Notification.NotificationType.ANNOUNCEMENT_NEW,
                 title="New Announcement",
                 message=announcement.title,
                 link=f"/accounts/announcements/{announcement.pk}/",
@@ -595,7 +618,7 @@ class MessageComposeView(LoginRequiredMixin, CreateView):
         message.save()
         Notification.objects.create(
             recipient=message.recipient,
-            notification_type=Notification.NotificationType.SYSTEM,
+            notification_type=Notification.NotificationType.MESSAGE_NEW,
             title="New Message",
             message=f"{message.sender.get_full_name() or message.sender.username}: {message.subject}",
             link=f"/accounts/messages/{message.pk}/",
@@ -632,7 +655,7 @@ class MessageReplyView(LoginRequiredMixin, CreateView):
         reply.save()
         Notification.objects.create(
             recipient=reply.recipient,
-            notification_type=Notification.NotificationType.SYSTEM,
+            notification_type=Notification.NotificationType.MESSAGE_REPLY,
             title="Message Reply",
             message=f"{reply.sender.get_full_name() or reply.sender.username}: {reply.subject}",
             link=f"/accounts/messages/{parent_message.pk}/",

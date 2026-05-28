@@ -1,5 +1,5 @@
 {% extends "base_modern.html" %}
-{% load assignment_tags %}
+{% load assignment_tags access_tags %}
 
 {% block title %}Dashboard - Platform{% endblock %}
 
@@ -8,19 +8,24 @@
     <div class="ops-header">
         <div>
             <h1>Dashboard</h1>
-            <p>Today’s operations, assignments, and pending actions.</p>
+            <p>Today's operations, work, and pending actions.</p>
         </div>
         <div class="ops-actions">
+            {% if module_access.attendance %}
             <a href="{% url 'attendance:attendance_dashboard' %}" class="btn btn-outline-modern">
                 <i class="bi bi-clock-history me-2"></i> Attendance
             </a>
+            {% endif %}
+            {% if module_access.assignments %}
             <a href="{% url 'assignments:my-assignments' %}" class="btn btn-primary-modern">
                 <i class="bi bi-list-check me-2"></i> My Work
             </a>
+            {% endif %}
         </div>
     </div>
 
     <div class="ops-kpi-grid mb-3">
+        {% if module_access.assignments %}
         <a href="{% url 'assignments:my-assignments' %}" class="ops-kpi">
             <span class="ops-kpi-icon"><i class="bi bi-person-check"></i></span>
             <span><strong>{{ user_assignments|default:0 }}</strong><small>My Assignments</small></span>
@@ -29,10 +34,13 @@
             <span class="ops-kpi-icon"><i class="bi bi-list-task"></i></span>
             <span><strong>{{ dashboard_assignment_count|default:0 }}</strong><small>{% if can_manage_assignments %}Active Work{% else %}My Work{% endif %}</small></span>
         </a>
+        {% endif %}
+        {% if module_access.leave %}
         <a href="{% if can_manage_leave %}{% url 'leave:leave_admin_list' %}?status=pending{% else %}{% url 'leave:leave_list' %}{% endif %}" class="ops-kpi warning">
             <span class="ops-kpi-icon"><i class="bi bi-calendar2-check"></i></span>
             <span><strong>{{ dashboard_leave_count|default:0 }}</strong><small>{% if can_manage_leave %}Pending Leave{% else %}My Leave{% endif %}</small></span>
         </a>
+        {% endif %}
         {% if can_manage_people %}
         <a href="{% url 'accounts:employee-list' %}" class="ops-kpi">
             <span class="ops-kpi-icon"><i class="bi bi-people"></i></span>
@@ -51,7 +59,7 @@
             <div class="card-modern h-100">
                 <div class="card-header-modern d-flex align-items-center justify-content-between">
                     <h5 class="card-title-modern mb-0"><i class="bi bi-clipboard-pulse me-2"></i> Pending Actions</h5>
-                    {% if can_manage_assignments %}
+                    {% if can_manage_assignments and module_access.assignments %}
                     <a href="{% url 'assignments:assignment-create' %}" class="btn btn-sm btn-outline-modern">
                         <i class="bi bi-plus-circle me-1"></i> New Assignment
                     </a>
@@ -59,6 +67,7 @@
                 </div>
                 <div class="card-body-modern">
                     <div class="ops-attention-grid">
+                        {% if module_access.assignments %}
                         <a href="{% if can_manage_assignments %}{% url 'assignments:assignment-list' %}?status=pending{% else %}{% url 'assignments:my-assignments' %}{% endif %}" class="ops-attention-item warning">
                             <span><i class="bi bi-hourglass-split"></i> {% if can_manage_assignments %}Pending assignments{% else %}My pending work{% endif %}</span>
                             <strong>{{ dashboard_pending_assignment_count|default:0 }}</strong>
@@ -67,10 +76,13 @@
                             <span><i class="bi bi-play-circle"></i> {% if can_manage_assignments %}In progress{% else %}My in progress{% endif %}</span>
                             <strong>{{ dashboard_in_progress_assignment_count|default:0 }}</strong>
                         </a>
+                        {% endif %}
+                        {% if module_access.leave %}
                         <a href="{% if can_manage_leave %}{% url 'leave:leave_admin_list' %}?status=pending{% else %}{% url 'leave:leave_list' %}{% endif %}" class="ops-attention-item warning">
                             <span><i class="bi bi-calendar2-check"></i> {% if can_manage_leave %}Leave approvals{% else %}My leave requests{% endif %}</span>
                             <strong>{{ dashboard_leave_count|default:0 }}</strong>
                         </a>
+                        {% endif %}
                         {% if can_manage_interventions %}
                         <a href="{% url 'interventions:intervention-list' %}" class="ops-attention-item">
                             <span><i class="bi bi-tools"></i> Active interventions</span>
@@ -94,9 +106,28 @@
                 </div>
                 <div class="card-body-modern">
                     <div class="ops-action-list">
+                        {% if module_access.attendance %}
                         <a href="{% url 'attendance:attendance_dashboard' %}"><i class="bi bi-clock-history"></i> Attendance Dashboard</a>
+                        {% endif %}
+                        {% if module_access.leave %}
                         <a href="{% url 'leave:leave_request' %}"><i class="bi bi-calendar-plus"></i> Request Leave</a>
+                        {% endif %}
+                        {% if module_access.interventions %}
+                        <a href="{% url 'interventions:corrective-report-create-free' %}"><i class="bi bi-clipboard-check"></i> Corrective Report</a>
+                        <a href="{% url 'interventions:corrective-report-list' %}"><i class="bi bi-list-ul"></i> All Reports</a>
+                        {% endif %}
+                        {% if module_access.warehouse %}
+                        <a href="{% url 'warehouse:request_create' %}"><i class="bi bi-box-arrow-in-down"></i> Request Materials</a>
+                        {% endif %}
+                        {% if module_access.messages %}
                         <a href="{% url 'accounts:message-inbox' %}"><i class="bi bi-envelope"></i> Messages</a>
+                        {% endif %}
+                        {% if module_access.warehouse %}
+                        <a href="{% url 'warehouse:dashboard' %}"><i class="bi bi-box-seam"></i> Warehouse</a>
+                        {% endif %}
+                        {% if module_access.sites_map %}
+                        <a href="{% url 'interventions:sites_map' %}"><i class="bi bi-map"></i> Sites Map</a>
+                        {% endif %}
                         <a href="{% url 'accounts:profile' %}"><i class="bi bi-person-circle"></i> My Profile</a>
                     </div>
                 </div>
@@ -104,8 +135,10 @@
         </div>
     </div>
 
+    {% if module_access.assignments or module_access.announcements %}
     <div class="row mb-3">
-        <div class="col-xl-8 mb-3">
+        {% if module_access.assignments %}
+        <div class="{% if module_access.announcements %}col-xl-8{% else %}col-xl-12{% endif %} mb-3">
             <div class="card-modern h-100">
                 <div class="card-header-modern d-flex align-items-center justify-content-between">
                     <h5 class="card-title-modern mb-0"><i class="bi bi-list-check me-2"></i> My Recent Assignments</h5>
@@ -155,8 +188,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
-        <div class="col-xl-4 mb-3">
+        {% if module_access.announcements %}
+        <div class="{% if module_access.assignments %}col-xl-4{% else %}col-xl-12{% endif %} mb-3">
             <div class="card-modern h-100">
                 <div class="card-header-modern d-flex align-items-center justify-content-between">
                     <h5 class="card-title-modern mb-0"><i class="bi bi-megaphone me-2"></i> Announcements</h5>
@@ -172,9 +207,11 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
+    {% endif %}
 
-    {% if show_all_users %}
+    {% if show_all_users and module_access.assignments %}
     <div class="card-modern mb-3">
         <div class="card-header-modern d-flex align-items-center justify-content-between">
             <h5 class="card-title-modern mb-0"><i class="bi bi-clock-history me-2"></i> Recent Work Assignments</h5>
@@ -224,21 +261,28 @@
 </div>
 
 <script>
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value || '';
+    return div.innerHTML;
+}
+
 function loadAnnouncements() {
+    const container = document.getElementById('announcements-container');
+    if (!container) return;
+
     fetch('/accounts/announcements/dashboard/')
         .then(response => response.json())
         .then(data => {
-            const container = document.getElementById('announcements-container');
-            if (!container) return;
             if (data.announcements && data.announcements.length > 0) {
                 container.innerHTML = data.announcements.map(announcement => `
                     <div class="ops-announcement-item">
                         <div class="d-flex justify-content-between gap-2">
-                            <strong>${announcement.title}</strong>
-                            <span class="ops-priority">${announcement.priority_display}</span>
+                            <strong>${escapeHtml(announcement.title)}</strong>
+                            <span class="ops-priority">${escapeHtml(announcement.priority_display)}</span>
                         </div>
-                        <p>${announcement.content}</p>
-                        <small><i class="bi bi-person me-1"></i>${announcement.author} · ${announcement.created_at}</small>
+                        <p>${escapeHtml(announcement.content)}</p>
+                        <small><i class="bi bi-person me-1"></i>${escapeHtml(announcement.author)} - ${escapeHtml(announcement.created_at)}</small>
                     </div>
                 `).join('');
             } else {
@@ -251,10 +295,7 @@ function loadAnnouncements() {
             }
         })
         .catch(() => {
-            const container = document.getElementById('announcements-container');
-            if (container) {
-                container.innerHTML = '<div class="text-muted small">Announcements could not be loaded.</div>';
-            }
+            container.innerHTML = '<div class="text-muted small">Announcements could not be loaded.</div>';
         });
 }
 

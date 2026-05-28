@@ -1,0 +1,106 @@
+{% extends "base_modern.html" %}
+
+{% block title %}All Corrective Reports - Interventions{% endblock %}
+
+{% block content %}
+<div class="main-content corrective-report-page">
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>All Corrective Reports</h1>
+            <p>View and manage all corrective intervention reports</p>
+        </div>
+    </div>
+
+    <div class="card-modern mb-3">
+        <div class="card-body-modern">
+            <form method="get" class="row">
+                <div class="col-md-4">
+                    <label class="form-label">Codice Nigit</label>
+                    <input type="text" name="codice_nigit" class="form-control" value="{{ codice_nigit }}" placeholder="Search by codice nigit">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary-modern"><i class="bi bi-search"></i> Filter</button>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <a href="{% url 'interventions:corrective-report-list' %}" class="btn btn-outline-modern">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-body-modern">
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>Codice Nigit</th>
+                            <th>Reporter</th>
+                            <th>Status</th>
+                            <th>Performed At</th>
+                            <th>Submitted At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in page_obj %}
+                        <tr>
+                            <td><strong>{{ report.intervention.codice_nigit }}</strong></td>
+                            <td>{{ report.reporter.get_full_name|default:report.reporter.username }}</td>
+                            <td><span class="badge bg-primary">{{ report.get_status_display }}</span></td>
+                            <td>{{ report.performed_at|date:"d/m/Y H:i"|default:"-" }}</td>
+                            <td>{{ report.submitted_at|date:"d/m/Y H:i"|default:"-" }}</td>
+                            <td>
+                                <a href="{% url 'interventions:corrective-report-detail' report.pk %}" class="btn btn-sm btn-outline-modern">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                <a href="{% url 'interventions:intervention-detail' report.intervention.pk %}" class="btn btn-sm btn-outline-modern">
+                                    <i class="bi bi-box-arrow-up-right"></i> Intervention
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-clipboard-x"></i>
+                <h5>No corrective reports found</h5>
+                <p>Try adjusting your filters or create a new corrective report.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+        <div class="btn-group">
+            {% if page_obj.has_previous %}
+            <a class="btn btn-sm btn-outline-modern" href="?page={{ page_obj.previous_page_number }}&codice_nigit={{ codice_nigit }}&status={{ status }}">
+                <i class="bi bi-chevron-left"></i> Previous
+            </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn btn-sm btn-primary-modern" href="?page={{ page_obj.next_page_number }}&codice_nigit={{ codice_nigit }}&status={{ status }}">
+                Next <i class="bi bi-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

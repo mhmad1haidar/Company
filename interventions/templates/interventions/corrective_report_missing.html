@@ -1,0 +1,23 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Corrective Report Not Found{% endblock %}
+
+{% block content %}
+<div class="main-content corrective-report-page">
+    <div class="empty-state">
+        <i class="bi bi-clipboard-x"></i>
+        <div class="empty-state-title">Corrective Report Not Found</div>
+        <div class="empty-state-text">
+            Report #{{ missing_report_id }} does not exist yet. A corrective report must be created from an intervention.
+        </div>
+        <div class="page-actions mt-3">
+            <a href="{% url 'interventions:intervention-list' %}" class="btn btn-primary-modern">
+                <i class="bi bi-list-check me-2"></i> Open Interventions
+            </a>
+            <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-modern">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

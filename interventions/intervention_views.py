@@ -1,5 +1,6 @@
 import csv
 from django.shortcuts import render, get_object_or_404, redirect
+from django.http import Http404, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
@@ -19,8 +20,8 @@ except ImportError:
     PANDAS_AVAILABLE = False
     pd = None
 
-from .models import Intervention
-from .forms import InterventionForm, InterventionSearchForm, InterventionImportForm
+from .models import CorrectiveReport, Intervention
+from .forms import CorrectiveReportForm, InterventionForm, InterventionSearchForm, InterventionImportForm
 from accounts.models import Notification
 
 User = get_user_model()
@@ -103,7 +104,104 @@ class InterventionDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'intervention'
     
     def get_queryset(self):
-        return Intervention.objects.select_related('created_by', 'used_car').prefetch_related('assigned_employees')
+        return Intervention.objects.select_related('created_by', 'used_car').prefetch_related(
+            'assigned_employees',
+            'corrective_reports__reporter',
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['corrective_reports'] = self.object.corrective_reports.select_related('reporter')[:5]
+        return context
+
+
+class CorrectiveReportCreateView(LoginRequiredMixin, CreateView):
+    """Create a corrective report for an intervention."""
+
+    model = CorrectiveReport
+    form_class = CorrectiveReportForm
+    template_name = 'interventions/corrective_report_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.intervention = get_object_or_404(Intervention, pk=kwargs['pk']) if kwargs.get('pk') else None
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['intervention'] = self.intervention
+        return kwargs
+
+    def form_valid(self, form):
+        report = form.save(commit=False)
+        report.intervention = self.intervention or form.intervention
+        report.reporter = self.request.user
+        report.status = CorrectiveReport.Status.SUBMITTED
+        report.submitted_at = timezone.now()
+        report.save()
+        messages.success(self.request, 'Corrective report submitted successfully.')
+        return redirect('interventions:corrective-report-detail', pk=report.pk)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['intervention'] = self.intervention
+        context['question_bound_fields'] = [
+            (label, context['form'][key])
+            for label, key in CorrectiveReportForm.QUESTION_FIELDS
+            if key in context['form'].fields
+        ]
+        return context
+
+
+@login_required
+def corrective_report_lookup(request):
+    """Return intervention defaults for corrective report autofill by Codice NIGIT."""
+    code = request.GET.get('codice_nigit', '').strip()
+    intervention = Intervention.objects.filter(codice_nigit__iexact=code).select_related('used_car').first()
+    if not intervention:
+        return JsonResponse({'found': False, 'message': 'No intervention found.'}, status=404)
+
+    return JsonResponse({
+        'found': True,
+        'intervention': {
+            'Cliente': intervention.cliente or '',
+            'Nome assistente e recapito telefonico': intervention.assistente or '',
+            'Cod. sito': intervention.codice_sito or '',
+            'NOME SITO BTS': intervention.nome or '',
+            'Tipo manutenzione': intervention.tipologia_intervento or '',
+            'Cod. intervento / Num. scheda gig': intervention.ticket or '',
+            'Data richiesta intervento': intervention.data_richiesta.isoformat() if intervention.data_richiesta else '',
+            'Veicolo Aziendale': str(intervention.used_car) if intervention.used_car else '',
+            'Richiesta Cliente': intervention.note or '',
+            'Cod_Nigit': intervention.codice_nigit or '',
+            'Cod. internazionale': intervention.international_code or '',
+        }
+    })
+
+
+class CorrectiveReportDetailView(LoginRequiredMixin, DetailView):
+    """Read-only corrective report detail."""
+
+    model = CorrectiveReport
+    template_name = 'interventions/corrective_report_detail.html'
+    context_object_name = 'report'
+
+    def get_queryset(self):
+        return CorrectiveReport.objects.select_related('intervention', 'reporter', 'approved_by')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except Http404:
+            messages.info(request, 'This corrective report does not exist yet. Create a report from an intervention page.')
+            return render(request, 'interventions/corrective_report_missing.html', {
+                'missing_report_id': kwargs.get('pk'),
+            }, status=404)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['answer_items'] = list((self.object.answers or {}).items())
+        return context
+
 
 
 class InterventionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):

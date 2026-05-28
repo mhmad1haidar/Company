@@ -3,7 +3,7 @@ from django.db.models import Count, Q
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import Intervention, TelecomSite
+from .models import CorrectiveReport, Intervention, TelecomSite
 
 
 @admin.register(Intervention)
@@ -198,3 +198,19 @@ class TelecomSiteAdmin(admin.ModelAdmin):
         if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(CorrectiveReport)
+class CorrectiveReportAdmin(admin.ModelAdmin):
+    list_display = ("codice_nigit", "reporter", "status", "performed_at", "submitted_at")
+    list_filter = ("status", "performed_at", "submitted_at")
+    search_fields = (
+        "intervention__codice_nigit",
+        "intervention__cliente",
+        "intervention__nome",
+        "reporter__username",
+        "reporter__first_name",
+        "reporter__last_name",
+    )
+    readonly_fields = ("created_at", "updated_at", "submitted_at")
+    autocomplete_fields = ("intervention", "reporter", "approved_by")

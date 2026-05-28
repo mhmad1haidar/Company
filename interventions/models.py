@@ -238,3 +238,59 @@ class Intervention(models.Model):
             'differenza': self.differenza_dare_avere or 0,
             'ses': self.ses_sirti or 0
         }
+
+
+class CorrectiveReport(models.Model):
+    """Corrective intervention report submitted by an employee."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        SUBMITTED = "submitted", "Submitted"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    intervention = models.ForeignKey(
+        Intervention,
+        on_delete=models.CASCADE,
+        related_name="corrective_reports",
+    )
+    reporter = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="corrective_reports",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    performed_at = models.DateTimeField(default=timezone.now)
+    fault_found = models.TextField(blank=True)
+    action_taken = models.TextField(blank=True)
+    work_summary = models.TextField(blank=True)
+    customer_notes = models.TextField(blank=True)
+    internal_notes = models.TextField(blank=True)
+    answers = models.JSONField(default=dict, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_corrective_reports",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["intervention", "status"]),
+            models.Index(fields=["reporter", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Corrective report {self.intervention.codice_nigit} - {self.get_status_display()}"
+
+    @property
+    def codice_nigit(self):
+        return self.intervention.codice_nigit

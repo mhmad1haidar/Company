@@ -1,0 +1,82 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Corrective Report - {{ report.codice_nigit }}{% endblock %}
+
+{% block content %}
+<div class="main-content corrective-report-page">
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Corrective Report</h1>
+            <p>{{ report.codice_nigit }} - submitted by {{ report.reporter.get_full_name|default:report.reporter.username }}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'interventions:intervention-detail' report.intervention.pk %}" class="btn btn-outline-modern">
+                <i class="bi bi-arrow-left me-2"></i> Intervention
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-3 mb-2">
+            <div class="card-modern h-100"><div class="card-body-modern">
+                <div class="text-muted small">Status</div>
+                <strong>{{ report.get_status_display }}</strong>
+            </div></div>
+        </div>
+        <div class="col-md-3 mb-2">
+            <div class="card-modern h-100"><div class="card-body-modern">
+                <div class="text-muted small">Performed</div>
+                <strong>{{ report.performed_at|date:"d/m/Y H:i" }}</strong>
+            </div></div>
+        </div>
+        <div class="col-md-3 mb-2">
+            <div class="card-modern h-100"><div class="card-body-modern">
+                <div class="text-muted small">Submitted</div>
+                <strong>{{ report.submitted_at|date:"d/m/Y H:i"|default:"-" }}</strong>
+            </div></div>
+        </div>
+        <div class="col-md-3 mb-2">
+            <div class="card-modern h-100"><div class="card-body-modern">
+                <div class="text-muted small">Codice NIGIT</div>
+                <strong>{{ report.codice_nigit }}</strong>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card-modern mb-3">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern mb-0"><i class="bi bi-clipboard-check me-2"></i> Work Summary</h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="row">
+                <div class="col-md-6 mb-3"><strong>Fault Found</strong><p class="text-muted mb-0">{{ report.fault_found|default:"-" }}</p></div>
+                <div class="col-md-6 mb-3"><strong>Action Taken</strong><p class="text-muted mb-0">{{ report.action_taken|default:"-" }}</p></div>
+                <div class="col-12 mb-3"><strong>Work Summary</strong><p class="text-muted mb-0">{{ report.work_summary|default:"-" }}</p></div>
+                <div class="col-md-6"><strong>Customer Notes</strong><p class="text-muted mb-0">{{ report.customer_notes|default:"-" }}</p></div>
+                <div class="col-md-6"><strong>Internal Notes</strong><p class="text-muted mb-0">{{ report.internal_notes|default:"-" }}</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern mb-0"><i class="bi bi-list-ul me-2"></i> Report Answers</h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="corrective-answer-grid">
+                {% for label, value in answer_items %}
+                <div class="corrective-answer">
+                    <span>{{ label }}</span>
+                    <strong>{{ value }}</strong>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <h5>No answers saved</h5>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

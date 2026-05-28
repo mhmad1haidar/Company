@@ -398,6 +398,9 @@ class Notification(models.Model):
         ASSIGNMENT_DEADLINE = 'assignment_deadline', 'Assignment Deadline'
         INTERVENTION_NEW = 'intervention_new', 'New Intervention'
         INTERVENTION_STATUS_CHANGE = 'intervention_status_change', 'Intervention Status Change'
+        MESSAGE_NEW = 'message_new', 'New Message'
+        MESSAGE_REPLY = 'message_reply', 'Message Reply'
+        ANNOUNCEMENT_NEW = 'announcement_new', 'New Announcement'
         SYSTEM = 'system', 'System'
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
@@ -419,6 +422,48 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.recipient.get_full_name()} - {self.title}"
+
+    @property
+    def icon_class(self):
+        icons = {
+            self.NotificationType.LEAVE_REQUEST: 'bi-calendar-plus',
+            self.NotificationType.LEAVE_APPROVED: 'bi-calendar-check',
+            self.NotificationType.LEAVE_REJECTED: 'bi-calendar-x',
+            self.NotificationType.ATTENDANCE_LATE: 'bi-clock-history',
+            self.NotificationType.ATTENDANCE_ABSENT: 'bi-person-dash',
+            self.NotificationType.ATTENDANCE_MISSING_CHECKOUT: 'bi-box-arrow-right',
+            self.NotificationType.ASSIGNMENT_NEW: 'bi-clipboard-plus',
+            self.NotificationType.ASSIGNMENT_STATUS_CHANGE: 'bi-clipboard-check',
+            self.NotificationType.ASSIGNMENT_DEADLINE: 'bi-hourglass-split',
+            self.NotificationType.INTERVENTION_NEW: 'bi-tools',
+            self.NotificationType.INTERVENTION_STATUS_CHANGE: 'bi-wrench-adjustable',
+            self.NotificationType.MESSAGE_NEW: 'bi-envelope',
+            self.NotificationType.MESSAGE_REPLY: 'bi-reply',
+            self.NotificationType.ANNOUNCEMENT_NEW: 'bi-megaphone',
+            self.NotificationType.SYSTEM: 'bi-info-circle',
+        }
+        return icons.get(self.notification_type, 'bi-bell')
+
+    @property
+    def category_class(self):
+        categories = {
+            self.NotificationType.LEAVE_REQUEST: 'leave',
+            self.NotificationType.LEAVE_APPROVED: 'leave',
+            self.NotificationType.LEAVE_REJECTED: 'leave',
+            self.NotificationType.ATTENDANCE_LATE: 'attendance',
+            self.NotificationType.ATTENDANCE_ABSENT: 'attendance',
+            self.NotificationType.ATTENDANCE_MISSING_CHECKOUT: 'attendance',
+            self.NotificationType.ASSIGNMENT_NEW: 'work',
+            self.NotificationType.ASSIGNMENT_STATUS_CHANGE: 'work',
+            self.NotificationType.ASSIGNMENT_DEADLINE: 'work',
+            self.NotificationType.INTERVENTION_NEW: 'work',
+            self.NotificationType.INTERVENTION_STATUS_CHANGE: 'work',
+            self.NotificationType.MESSAGE_NEW: 'message',
+            self.NotificationType.MESSAGE_REPLY: 'message',
+            self.NotificationType.ANNOUNCEMENT_NEW: 'announcement',
+            self.NotificationType.SYSTEM: 'system',
+        }
+        return categories.get(self.notification_type, 'system')
 
 
 class Announcement(models.Model):

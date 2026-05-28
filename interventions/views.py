@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.contrib import messages
 
 from accounts.models import User
-from .models import Intervention
+from .models import Intervention, CorrectiveReport
 from accounts.permissions import role_required, user_is_assigned_to_intervention, get_user_role
 # from reports.models import Report  # Commented out until reports module is integrated
 from django.core.exceptions import PermissionDenied
@@ -496,4 +496,37 @@ def get_directions(request, pk):
         'success': False,
         'error': 'No location information available',
         'debug': debug_info
+    })
+
+
+@login_required
+def corrective_report_list(request):
+    """List all corrective reports with filtering by codice_nigit"""
+    reports = CorrectiveReport.objects.select_related(
+        'intervention',
+        'reporter',
+        'approved_by'
+    ).order_by('-created_at')
+    
+    # Filter by codice_nigit if provided
+    codice_nigit = request.GET.get('codice_nigit')
+    if codice_nigit:
+        reports = reports.filter(intervention__codice_nigit__icontains=codice_nigit)
+    
+    # Filter by status if provided
+    status = request.GET.get('status')
+    if status:
+        reports = reports.filter(status=status)
+    
+    # Pagination
+    paginator = Paginator(reports, 25)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'interventions/corrective_report_list.html', {
+        'page_obj': page_obj,
+        'is_paginated': paginator.num_pages > 1,
+        'codice_nigit': codice_nigit,
+        'status': status,
+        'status_choices': CorrectiveReport.Status.choices
     })

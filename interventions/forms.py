@@ -1,6 +1,175 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Intervention
+import unicodedata
+from .models import CorrectiveReport, Intervention
+
+
+CORRECTIVE_REPORT_COLUMNS = [
+    "Indirizzo email",
+    "Cliente",
+    "REGIONE",
+    "Nome assistente e recapito telefonico",
+    "Nome ordinante",
+    "Cod. sito",
+    "NOME SITO BTS",
+    "Tipo manutenzione",
+    "Tipo Manutenzione Altro",
+    "Cod. intervento / Num. scheda gig",
+    "Data richiesta intervento",
+    "Personale presente",
+    "Veicolo Aziendale",
+    "Richiesta Cliente",
+    "Descrizione intervento",
+    "Data esecuzione lavori",
+    "Intervento risolutivo?",
+    "Richiesta sospensione",
+    "Descrivere la causa della sospensione",
+    "Data",
+    "Inizio lavori",
+    "Fine lavori",
+    "Cod_Nigit",
+    "Presente squadra di supporto?",
+    "Personale presente supporto",
+    "Veicolo Aziendale supporto",
+    "Cod. internazionale",
+    "Personale presente supporto 2",
+    "Materiale utilizzato 1",
+    "Materiale utilizzato 2",
+    "Materiale utilizzato 3",
+    "Materiale utilizzato 4",
+    "Materiale utilizzato 5",
+    "Quantità1",
+    "Quantità2",
+    "Quantità3",
+    "Quantità4",
+    "Quantità5",
+    "Materiale Non presente nella lista 1",
+    "Quantità1-1",
+    "Materiale Non presente nella lista 2",
+    "Quantità2-2",
+    "Materiale Non presente nella lista 3",
+    "Quantità3-3",
+    "Confirmation",
+    "Indirizzio",
+    "Elenco Materiale necessarie per completare il lavoro :",
+    "SENT",
+]
+
+
+def _question_key(label):
+    normalized = unicodedata.normalize("NFKD", label).encode("ascii", "ignore").decode("ascii")
+    return "q_" + "".join(ch.lower() if ch.isalnum() else "_" for ch in normalized).strip("_")
+
+
+class CorrectiveReportForm(forms.ModelForm):
+    """Corrective report form generated from the Excel report columns."""
+
+    QUESTION_FIELDS = [(label, _question_key(label)) for label in CORRECTIVE_REPORT_COLUMNS]
+
+    class Meta:
+        model = CorrectiveReport
+        fields = [
+            "performed_at",
+            "fault_found",
+            "action_taken",
+            "work_summary",
+            "customer_notes",
+            "internal_notes",
+        ]
+        widgets = {
+            "performed_at": forms.DateTimeInput(attrs={"type": "datetime-local", "class": "form-control"}),
+            "fault_found": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "action_taken": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "work_summary": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "customer_notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
+            "internal_notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
+        }
+
+    def __init__(self, *args, intervention=None, **kwargs):
+        self.intervention = intervention or getattr(kwargs.get("instance"), "intervention", None)
+        super().__init__(*args, **kwargs)
+
+        if not self.intervention:
+            self.fields["codice_nigit_lookup"] = forms.CharField(
+                label="Codice NIGIT",
+                required=True,
+                widget=forms.TextInput(attrs={
+                    "class": "form-control corrective-code-lookup",
+                    "placeholder": "Enter Codice NIGIT",
+                    "autocomplete": "off",
+                }),
+            )
+
+        existing_answers = getattr(self.instance, "answers", None) or {}
+        defaults = self._intervention_defaults()
+        for label, key in self.QUESTION_FIELDS:
+            field = self._build_question_field(label)
+            field.initial = existing_answers.get(label, defaults.get(label, ""))
+            self.fields[key] = field
+
+    def clean_codice_nigit_lookup(self):
+        code = self.cleaned_data.get("codice_nigit_lookup", "").strip()
+        if self.intervention:
+            return code
+        try:
+            self.intervention = Intervention.objects.get(codice_nigit__iexact=code)
+        except Intervention.DoesNotExist as exc:
+            raise forms.ValidationError("No intervention found with this Codice NIGIT.") from exc
+        return code
+
+    def _build_question_field(self, label):
+        attrs = {"class": "form-control", "placeholder": label}
+        lower = label.lower()
+        if "data" in lower:
+            return forms.DateField(label=label, required=False, widget=forms.DateInput(attrs={**attrs, "type": "date"}))
+        if "inizio lavori" in lower or "fine lavori" in lower:
+            return forms.TimeField(label=label, required=False, widget=forms.TimeInput(attrs={**attrs, "type": "time"}))
+        if "quantità" in lower:
+            return forms.IntegerField(label=label, required=False, min_value=0, widget=forms.NumberInput(attrs=attrs))
+        if "risolutivo" in lower or "sospensione" in lower or "supporto?" in lower or label == "Confirmation":
+            return forms.ChoiceField(
+                label=label,
+                required=False,
+                choices=[("", "---------"), ("yes", "Yes"), ("no", "No")],
+                widget=forms.Select(attrs={"class": "form-select"}),
+            )
+        rows = 2 if any(word in lower for word in ["richiesta", "descrizione", "elenco", "causa"]) else 1
+        if rows > 1:
+            return forms.CharField(label=label, required=False, widget=forms.Textarea(attrs={**attrs, "rows": rows}))
+        return forms.CharField(label=label, required=False, widget=forms.TextInput(attrs=attrs))
+
+    def _intervention_defaults(self):
+        intervention = self.intervention
+        if not intervention:
+            return {}
+        return {
+            "Cliente": intervention.cliente or "",
+            "Nome assistente e recapito telefonico": intervention.assistente or "",
+            "Cod. sito": intervention.codice_sito or "",
+            "NOME SITO BTS": intervention.nome or "",
+            "Tipo manutenzione": intervention.tipologia_intervento or "",
+            "Cod. intervento / Num. scheda gig": intervention.ticket or "",
+            "Data richiesta intervento": intervention.data_richiesta,
+            "Veicolo Aziendale": str(intervention.used_car) if intervention.used_car else "",
+            "Richiesta Cliente": intervention.note or "",
+            "Cod_Nigit": intervention.codice_nigit or "",
+            "Cod. internazionale": intervention.international_code or "",
+        }
+
+    def save(self, commit=True):
+        report = super().save(commit=False)
+        answers = {}
+        for label, key in self.QUESTION_FIELDS:
+            value = self.cleaned_data.get(key)
+            if value in [None, ""]:
+                continue
+            if hasattr(value, "isoformat"):
+                value = value.isoformat()
+            answers[label] = value
+        report.answers = answers
+        if commit:
+            report.save()
+        return report
 
 
 class InterventionForm(forms.ModelForm):

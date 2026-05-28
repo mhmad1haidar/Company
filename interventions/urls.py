@@ -3,9 +3,10 @@ from django.urls import path, include
 from .views import *
 from .map_views import sites_map, import_sites_csv, import_sites_json, clear_sites_cache
 from .intervention_views import (
+    CorrectiveReportCreateView, CorrectiveReportDetailView,
     InterventionListView, InterventionDetailView, InterventionCreateView,
     InterventionUpdateView, InterventionDeleteView, InterventionImportView, 
-    export_interventions_csv, intervention_dashboard, bulk_delete_interventions
+    corrective_report_lookup, export_interventions_csv, intervention_dashboard, bulk_delete_interventions
 )
 
 app_name = 'interventions'
@@ -21,6 +22,11 @@ urlpatterns = [
     path('<uuid:pk>/', InterventionDetailView.as_view(), name='intervention-detail'),
     path('<uuid:pk>/edit/', InterventionUpdateView.as_view(), name='intervention-update'),
     path('<uuid:pk>/delete/', InterventionDeleteView.as_view(), name='intervention-delete'),
+    path('corrective-report/new/', CorrectiveReportCreateView.as_view(), name='corrective-report-create-free'),
+    path('corrective-report/lookup/', corrective_report_lookup, name='corrective-report-lookup'),
+    path('<uuid:pk>/corrective-report/new/', CorrectiveReportCreateView.as_view(), name='corrective-report-create'),
+    path('corrective-reports/<int:pk>/', CorrectiveReportDetailView.as_view(), name='corrective-report-detail'),
+    path('corrective-reports/', corrective_report_list, name='corrective-report-list'),
     path('intervention/<uuid:pk>/get-directions/', get_directions, name='intervention-get-directions'),
     path('bulk-delete/', bulk_delete_interventions, name='intervention-bulk-delete'),
     path('import/', InterventionImportView.as_view(), name='intervention-import'),
