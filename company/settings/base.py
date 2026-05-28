@@ -180,3 +180,15 @@ CORS_ALLOWED_ORIGINS = env.list(
 )
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
+
+# Google Drive Storage Configuration (Shared Drive)
+GOOGLE_DRIVE_CREDENTIALS_PATH = BASE_DIR / "company" / "google_drive_credentials.json"
+GOOGLE_DRIVE_SHARED_DRIVE_ID = "0AEhS2Z1pFEMVUk9PVA"
+
+# Static files configuration
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Media files configuration (uploads)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

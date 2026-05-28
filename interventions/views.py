@@ -420,3 +420,80 @@ def intervention_search(request):
     )
     
     return JsonResponse({'results': results})
+
+
+@login_required
+def get_directions(request, pk):
+    """Get directions URL for intervention - looks up TelecomSite by international_code"""
+    intervention = get_object_or_404(Intervention, pk=pk)
+    
+    # Check if user can view this intervention
+    role = get_user_role(request.user)
+    if role == "technician" and not user_is_assigned_to_intervention(request.user, intervention):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    debug_info = []
+    
+    # Match International Code with site_code in TelecomSite
+    if intervention.international_code:
+        from .models import TelecomSite
+        
+        international_code = intervention.international_code.strip()
+        debug_info.append(f"Looking for international_code: '{international_code}'")
+        
+        # Check what TelecomSite model has
+        first_site = TelecomSite.objects.first()
+        if first_site:
+            debug_info.append(f"TelecomSite model - site_code field exists: {hasattr(first_site, 'site_code')}")
+            if hasattr(first_site, 'site_code'):
+                debug_info.append(f"Sample site_code from DB: '{first_site.site_code}'")
+        
+        site = TelecomSite.objects.filter(
+            site_code__iexact=international_code
+        ).first()
+        
+        if site:
+            debug_info.append(f"Found site: {site.site_name}, site_code='{site.site_code}', lat={site.latitude}, lng={site.longitude}")
+            if site.latitude and site.longitude:
+                directions_url = f"https://www.google.com/maps/dir/?api=1&destination={site.latitude},{site.longitude}"
+                return JsonResponse({
+                    'success': True,
+                    'directions_url': directions_url
+                })
+            else:
+                debug_info.append("Site found but NO coordinates!")
+        else:
+            debug_info.append(f"No site found with international_code: '{international_code}'")
+            # Show similar codes
+            similar = TelecomSite.objects.filter(site_code__icontains=international_code[:3])[:3]
+            if similar:
+                debug_info.append(f"Similar codes in DB: {[s.site_code for s in similar]}")
+    else:
+        debug_info.append("Intervention has NO international_code!")
+    
+    # Try codice_sito as fallback
+    if intervention.codice_sito:
+        from .models import TelecomSite
+        
+        codice_sito = intervention.codice_sito.strip()
+        debug_info.append(f"Trying codice_sito: '{codice_sito}'")
+        
+        site = TelecomSite.objects.filter(
+            site_code__iexact=codice_sito
+        ).first()
+        
+        if site and site.latitude and site.longitude:
+            directions_url = f"https://www.google.com/maps/dir/?api=1&destination={site.latitude},{site.longitude}"
+            return JsonResponse({
+                'success': True,
+                'directions_url': directions_url
+            })
+        else:
+            debug_info.append(f"No site found with codice_sito: '{codice_sito}'")
+    
+    # No location data available
+    return JsonResponse({
+        'success': False,
+        'error': 'No location information available',
+        'debug': debug_info
+    })

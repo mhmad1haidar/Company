@@ -1,0 +1,108 @@
+{% extends "base_modern.html" %}
+
+{% block title %}New Warehouse Request - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    {% include "warehouse/includes/warehouse_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>New Warehouse Request</h1>
+            <p>Request materials from warehouse stock for approval.</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'warehouse:request_list' %}" class="btn btn-outline-modern"><i class="bi bi-arrow-left me-2"></i> Requests</a>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-body-modern">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    {% for field in form %}
+                    <div class="{% if field.name == 'reason' or field.name == 'notes' %}col-12{% else %}col-md-6{% endif %} mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-4 pt-4 border-top">
+                    <h5 class="mb-3"><i class="bi bi-box-seam me-2"></i> Request Items</h5>
+                    <div id="item-formset">
+                        {{ item_formset.management_form }}
+                        {% for item_form in item_formset %}
+                        <div class="item-form mb-3 p-3 bg-light rounded">
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <label class="form-label">Item *</label>
+                                    {{ item_form.item }}
+                                    {% for error in item_form.item.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="form-label">Quantity Requested *</label>
+                                    {{ item_form.quantity_requested }}
+                                    {% for error in item_form.quantity_requested.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-1 mb-2">
+                                    <label class="form-label">Remove</label>
+                                    {{ item_form.DELETE }}
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <label class="form-label">Notes</label>
+                                    {{ item_form.notes }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" id="add-item" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Another Item</button>
+                </div>
+
+                <div class="page-actions mt-4">
+                    <button type="submit" class="btn btn-primary-modern"><i class="bi bi-send-check me-2"></i> Submit Request</button>
+                    <a href="{% url 'warehouse:request_list' %}" class="btn btn-outline-modern">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addButton = document.getElementById('add-item');
+    const formsetContainer = document.getElementById('item-formset');
+    const totalFormsInput = document.getElementById('id_form-TOTAL_FORMS');
+    
+    addButton.addEventListener('click', function() {
+        const totalForms = parseInt(totalFormsInput.value);
+        const newFormIndex = totalForms;
+        
+        // Clone the first form
+        const firstForm = formsetContainer.querySelector('.item-form');
+        const newForm = firstForm.cloneNode(true);
+        
+        // Update form indexes
+        newForm.innerHTML = newForm.innerHTML.replace(/form-\d+-/g, `form-${newFormIndex}-`);
+        
+        // Clear form values
+        newForm.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.type === 'checkbox') {
+                input.checked = false;
+            } else {
+                input.value = '';
+            }
+        });
+        
+        // Add to formset
+        formsetContainer.appendChild(newForm);
+        
+        // Update total forms count
+        totalFormsInput.value = totalForms + 1;
+    });
+});
+</script>
+{% endblock %}

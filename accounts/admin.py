@@ -21,6 +21,7 @@ class UserAdmin(DjangoUserAdmin):
                     "employee_id",
                     "department",
                     "job_title",
+                    "module_access",
                 ),
             },
         ),

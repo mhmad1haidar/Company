@@ -1,0 +1,81 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Inventory Valuation Report - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="card-modern mb-4">
+        <div class="card-body-modern py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h4 class="mb-1">Inventory Valuation Report</h4>
+                    <p class="text-muted mb-0 small">Total inventory value calculation</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'warehouse:export_inventory_excel' %}" class="btn btn-outline-modern btn-sm">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </a>
+                    <a href="{% url 'warehouse:export_inventory_csv' %}" class="btn btn-outline-modern btn-sm">
+                        <i class="bi bi-filetype-csv"></i> CSV
+                    </a>
+                    <a href="{% url 'warehouse:export_inventory_pdf' %}" class="btn btn-outline-modern btn-sm">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
+                    <a href="{% url 'warehouse:dashboard' %}" class="btn btn-outline-modern btn-sm">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="{% url 'warehouse:item_list' %}" class="btn btn-primary-modern btn-sm">
+                        <i class="bi bi-box-seam"></i> Items
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern mb-4">
+        <div class="card-body-modern">
+            <div class="text-center">
+                <h2>Total Inventory Value</h2>
+                <h1 class="text-success">{{ total_value|floatformat:2 }} €</h1>
+                <p class="text-muted">Based on {{ items|length }} items</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-header-modern">
+            <h5 class="card-title-modern"><i class="bi bi-list me-2"></i> Items Detail</h5>
+        </div>
+        <div class="card-body-modern">
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Zone</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item_data in items_with_value %}
+                        <tr>
+                            <td><strong>{{ item_data.item.code }}</strong></td>
+                            <td>{{ item_data.item.name }}</td>
+                            <td>{{ item_data.item.category.name|default:"-" }}</td>
+                            <td>{{ item_data.item.zone.code|default:"-" }}</td>
+                            <td>{{ item_data.item.quantity }}</td>
+                            <td>{{ item_data.item.selling_price }}</td>
+                            <td>{{ item_data.value|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

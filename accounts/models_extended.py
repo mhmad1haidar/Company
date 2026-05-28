@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
 import uuid
+from company.google_drive_storage import GoogleDriveStorage
 
 User = get_user_model()
 
@@ -206,7 +207,7 @@ class EmployeeDocument(models.Model):
     document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPES)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    file = models.FileField(upload_to='employee_documents/%Y/%m/')
+    file = models.FileField(upload_to='employee_documents/%Y/%m/', storage=GoogleDriveStorage())
     upload_date = models.DateTimeField(auto_now_add=True)
     expiry_date = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)

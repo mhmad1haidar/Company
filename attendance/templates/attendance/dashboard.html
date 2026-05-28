@@ -1,0 +1,287 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}Attendance Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.stats-card {
+    transition: transform 0.2s;
+}
+.stats-card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Attendance Dashboard</h2>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Attendance Sections:</h5>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{% url 'attendance:attendance_dashboard' %}" class="btn btn-primary">Dashboard</a>
+                        <a href="{% url 'attendance:attendance_table' %}" class="btn btn-outline-primary">Attendance Table</a>
+                        <a href="{% url 'attendance:calendar' %}" class="btn btn-outline-primary">Calendar View</a>
+                        <a href="{% url 'attendance:monthly_report' %}" class="btn btn-outline-primary">Monthly Report</a>
+                        {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'manager' %}
+                        <a href="{% url 'attendance:manual_entry' %}" class="btn btn-success">Manual Entry</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Quick Actions</h5>
+                    <div class="d-flex gap-2">
+                        {% if has_active_check_in %}
+                            <form method="post" action="{% url 'attendance:attendance_check_out' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="bi bi-box-arrow-right"></i> Check Out
+                                </button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'attendance:attendance_check_in' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-box-arrow-in-right"></i> Check In
+                                </button>
+                            </form>
+                        {% endif %}
+                        <a href="{% url 'attendance:attendance_table' %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-table"></i> View Attendance
+                        </a>
+                        <a href="{% url 'attendance:calendar' %}" class="btn btn-info btn-lg">
+                            <i class="bi bi-calendar"></i> Calendar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Today's Status</h5>
+                    {% if today_attendance %}
+                        <div class="row">
+                            <div class="col-md-3">
+                                <p><strong>Check In:</strong> {{ today_attendance.check_in|date:"H:i" }}</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>Check Out:</strong> {{ today_attendance.check_out|date:"H:i"|default:"Not yet" }}</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>Status:</strong> 
+                                    <span class="badge bg-{{ today_attendance.status_color }}">{{ today_attendance.get_status_display }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>Work Hours:</strong> {{ today_attendance.total_hours|default:"0" }}h</p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No attendance record for today. Please check in.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Weekly Statistics</h4>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Hours</h6>
+                    <h3>{{ week_total_hours|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Overtime</h6>
+                    <h3>{{ week_overtime_hours|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Work Days</h6>
+                    <h3>{{ week_work_days }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Avg Hours/Day</h6>
+                    <h3>{% if week_work_days > 0 %}{{ week_total_hours|floatformat:1 }}{% else %}0{% endif %}h</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Monthly Statistics</h4>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Hours</h6>
+                    <h3>{{ month_total_hours|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Overtime</h6>
+                    <h3>{{ month_overtime_hours|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Work Days</h6>
+                    <h3>{{ month_work_days }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Avg Hours/Day</h6>
+                    <h3>{% if month_work_days > 0 %}{{ month_total_hours|floatformat:1 }}{% else %}0{% endif %}h</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organization Statistics (for admins/managers) -->
+    {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'manager' %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Organization Statistics (Today)</h4>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Present</h6>
+                    <h3>{{ present_count }}/{{ total_employees }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Absent</h6>
+                    <h3>{{ absent_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Late</h6>
+                    <h3>{{ late_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-secondary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Employees</h6>
+                    <h3>{{ total_employees }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Pending Approvals -->
+    {% if has_pending_approvals %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Pending Approvals</h5>
+                    <p>You have {{ pending_approvals|length }} manual attendance entries pending approval.</p>
+                    <a href="{% url 'attendance:attendance_table' %}?approved=pending" class="btn btn-primary">Review Pending</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Attendance -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Recent Attendance</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Work Hours</th>
+                                    <th>Overtime</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in recent_attendance %}
+                                <tr>
+                                    <td>{{ record.date|date:"Y-m-d" }}</td>
+                                    <td>{{ record.check_in|date:"H:i"|default:"-" }}</td>
+                                    <td>{{ record.check_out|date:"H:i"|default:"-" }}</td>
+                                    <td>{{ record.total_hours|default:"0" }}h</td>
+                                    <td>{{ record.overtime_hours|default:"0" }}h</td>
+                                    <td>
+                                        <span class="badge bg-{{ record.status_color }}">{{ record.get_status_display }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No attendance records found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

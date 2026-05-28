@@ -1,0 +1,73 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Purchase Orders - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="card-modern mb-4">
+        <div class="card-body-modern py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h4 class="mb-1">Purchase Orders</h4>
+                    <p class="text-muted mb-0 small">Manage orders to suppliers</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'warehouse:dashboard' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="{% url 'warehouse:item_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-box-seam"></i> Items
+                    </a>
+                    <a href="{% url 'warehouse:purchase_order_create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> New Order
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-body-modern">
+            {% if orders %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Supplier</th>
+                            <th>Date</th>
+                            <th>Expected Delivery</th>
+                            <th>Status</th>
+                            <th>Created By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td><strong>PO-{{ order.order_number }}</strong></td>
+                            <td>{{ order.supplier.name }}</td>
+                            <td>{{ order.order_date|date:"Y-m-d" }}</td>
+                            <td>{{ order.expected_delivery_date|default:"-"|date:"Y-m-d" }}</td>
+                            <td><span class="badge bg-{{ order.status|default:'secondary' }}">{{ order.get_status_display }}</span></td>
+                            <td>{{ order.created_by.username|default:"-" }}</td>
+                            <td>
+                                <a href="{% url 'warehouse:purchase_order_detail' order.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'warehouse:purchase_order_update' order.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No purchase orders found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -3,18 +3,20 @@ from django.db import models
 from django.core.validators import RegexValidator
 import os
 from django.utils import timezone
+from company.google_drive_storage import GoogleDriveStorage
 
 def employee_document_path(instance, filename):
-    """Generate upload path for employee documents: employee_documents/user_id_username/YYYY/MM/filename"""
+    """Generate upload path for employee documents: employee_documents/user_id_username/doc_type/YYYY/filename"""
     user_id = instance.employee.id
     username = instance.employee.username
     year = timezone.now().year
-    month = timezone.now().month
+    # Get document type from instance
+    doc_type = instance.document_type if instance.document_type else 'document'
     # Get file extension
     ext = os.path.splitext(filename)[1]
     # Create safe filename
     safe_filename = f"doc_{instance.id if instance.id else 'new'}{ext}"
-    return f'employee_documents/{user_id}_{username}/{year:04d}/{month:02d}/{safe_filename}'
+    return f'employee_documents/{user_id}_{username}/{doc_type}/{year:04d}/{safe_filename}'
 
 
 class UserManager(DjangoUserManager):
@@ -49,6 +51,19 @@ class User(AbstractUser):
         EMPLOYEE = "employee", "Employee"
         EX_EMPLOYEE = "ex_employee", "Ex-Employee"
 
+    MODULE_ACCESS_CHOICES = [
+        ("employees", "Employees"),
+        ("attendance", "Attendance"),
+        ("leave", "Leave"),
+        ("assignments", "Assignments"),
+        ("warehouse", "Warehouse"),
+        ("fleet", "Fleet"),
+        ("interventions", "Interventions"),
+        ("sites_map", "Sites Map"),
+        ("messages", "Messages"),
+        ("announcements", "Announcements"),
+    ]
+
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
@@ -65,6 +80,7 @@ class User(AbstractUser):
     department = models.CharField(max_length=128, blank=True)
     job_title = models.CharField(max_length=128, blank=True)
     dark_mode = models.BooleanField(default=False, help_text="Enable dark mode for user interface")
+    module_access = models.JSONField(default=list, blank=True)
 
     objects = UserManager()
 
@@ -73,6 +89,11 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return self.get_full_name() or self.username
+
+    def has_module_access(self, module: str) -> bool:
+        if self.is_superuser or self.is_staff or self.role in {self.Role.ADMIN, self.Role.MANAGER}:
+            return True
+        return module in (self.module_access or [])
 
 
 class Department(models.Model):
@@ -209,7 +230,7 @@ class EmployeeDocument(models.Model):
     document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPES)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    file = models.FileField(upload_to=employee_document_path)
+    file = models.FileField(upload_to=employee_document_path, storage=GoogleDriveStorage())
     upload_date = models.DateTimeField(auto_now_add=True)
     expiry_date = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
@@ -283,7 +304,7 @@ class Certification(models.Model):
     issuing_organization = models.CharField(max_length=200)
     issue_date = models.DateField()
     expiry_date = models.DateField()
-    certificate_file = models.FileField(upload_to='certifications/', null=True, blank=True)
+    certificate_file = models.FileField(upload_to='certifications/', null=True, blank=True, storage=GoogleDriveStorage())
     is_active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

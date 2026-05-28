@@ -1,3 +1,4 @@
+{% load access_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,9 +74,34 @@
             --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
         }
+
+        :root {
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            --surface-raised: rgba(255, 255, 255, 0.92);
+            --surface-muted: rgba(248, 250, 252, 0.86);
+            --shadow-lg: 0 18px 40px -24px rgb(15 23 42 / 0.36);
+            --shadow-xl: 0 28px 80px -36px rgb(15 23 42 / 0.45);
+            --focus-ring: 0 0 0 4px rgba(79, 70, 229, 0.16);
+        }
+
+        body.dark-mode {
+            --surface-raised: rgba(30, 41, 59, 0.9);
+            --surface-muted: rgba(15, 23, 42, 0.78);
+            --focus-ring: 0 0 0 4px rgba(129, 140, 248, 0.2);
+        }
         
         * {
             box-sizing: border-box;
+            letter-spacing: 0;
         }
         
         ul, li {
@@ -86,7 +112,9 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg-secondary);
+            background:
+                radial-gradient(circle at top left, rgba(79, 70, 229, 0.08), transparent 34rem),
+                linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
             color: var(--text-primary);
             margin: 0;
             padding: 0;
@@ -95,10 +123,16 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
+
+        body.dark-mode {
+            background:
+                radial-gradient(circle at top left, rgba(129, 140, 248, 0.12), transparent 34rem),
+                linear-gradient(180deg, #020617 0%, #0f172a 100%);
+        }
         
         /* Professional SaaS Navbar */
         .navbar-modern {
-            background: white;
+            background: rgba(255, 255, 255, 0.86);
             border-bottom: 1px solid var(--border-color);
             box-shadow: var(--shadow-sm);
             padding: 0;
@@ -106,6 +140,7 @@
             top: 0;
             z-index: 1000;
             width: 100%;
+            backdrop-filter: saturate(180%) blur(18px);
         }
         
         .navbar-container {
@@ -115,8 +150,9 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 40px;
-            height: 56px;
+            min-height: 60px;
             overflow: visible;
+            gap: 24px;
         }
         
         .navbar-brand {
@@ -166,7 +202,7 @@
             padding: 8px 16px;
             text-decoration: none;
             color: var(--text-secondary);
-            border-radius: var(--border-radius);
+            border-radius: 999px;
             transition: var(--transition);
             font-weight: 500;
             font-size: var(--font-sm);
@@ -181,9 +217,10 @@
         }
         
         .nav-link.active {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
             color: white;
             border-color: var(--primary);
+            box-shadow: 0 10px 22px -16px rgba(79, 70, 229, 0.85);
         }
         
         .nav-link i {
@@ -370,18 +407,25 @@
         
         /* Full-Width Professional Layout */
         .main-content {
-            padding: 20px 40px;
+            padding: clamp(16px, 2vw, 32px);
             width: 100%;
-            min-height: calc(100vh - 56px);
+            min-height: calc(100vh - 60px);
+        }
+
+        .main-content > .container-fluid {
+            max-width: 1540px;
+            padding-inline: clamp(4px, 1.2vw, 18px);
         }
         
         .page-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            gap: 16px;
             margin-bottom: 24px;
-            padding-bottom: 16px;
+            padding: 20px 0 18px;
             border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
         }
         
         .page-title-section h1 {
@@ -406,24 +450,28 @@
         }
         
         /* Compact Professional Cards */
+        .card,
         .card-modern {
-            background: white;
+            background: var(--surface-raised);
             border: 1px solid var(--border-color);
-            border-radius: var(--border-radius-lg);
-            box-shadow: var(--shadow-sm);
+            border-radius: 8px;
+            box-shadow: 0 14px 38px -30px rgb(15 23 42 / 0.55);
             margin-bottom: 16px;
-            transition: var(--transition);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
             overflow: hidden;
         }
         
+        .card:hover,
         .card-modern:hover {
-            box-shadow: var(--shadow);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-lg);
         }
         
+        .card-header,
         .card-header-modern {
             padding: 16px 20px;
             border-bottom: 1px solid var(--border-color);
-            background: var(--bg-secondary);
+            background: var(--surface-muted);
         }
         
         .card-title-modern {
@@ -435,19 +483,20 @@
             align-items: center;
         }
         
+        .card-body,
         .card-body-modern {
             padding: 20px;
         }
         
         /* Compact Stats Cards */
         .stat-card {
-            background: white;
+            background: var(--surface-raised);
             border: 1px solid var(--border-color);
-            border-radius: var(--border-radius-lg);
+            border-radius: 8px;
             padding: 16px;
             text-align: center;
             transition: var(--transition);
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 14px 38px -30px rgb(15 23 42 / 0.55);
         }
         
         .stat-card:hover {
@@ -519,13 +568,18 @@
         }
         
         /* Modern Buttons */
+        .btn,
         .btn-modern {
             border-radius: 8px;
             font-weight: 500;
-            padding: 0.625rem 1.25rem;
-            border: none;
+            min-height: 38px;
             transition: all 0.2s ease;
             font-size: 14px;
+        }
+
+        .btn-modern {
+            padding: 0.625rem 1.25rem;
+            border: none;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
@@ -550,15 +604,16 @@
             left: 100%;
         }
         
+        .btn:hover,
         .btn-modern:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: var(--shadow-md);
             text-decoration: none;
         }
         
         .btn-danger-modern {
             background: var(--danger);
-            color: #000000;
+            color: #ffffff;
             border: none;
             text-decoration: none;
             border-radius: 8px;
@@ -657,6 +712,8 @@
         }
         
         /* Compact Form Elements */
+        .form-control,
+        .form-select,
         .form-control-modern,
         input.form-control-modern,
         select.form-control-modern,
@@ -667,17 +724,19 @@
             font-size: var(--font-sm);
             font-weight: 400;
             transition: var(--transition);
-            background: white;
+            background: var(--surface-raised);
             width: 100%;
             color: var(--text-primary);
         }
         
+        .form-control:focus,
+        .form-select:focus,
         .form-control-modern:focus,
         input.form-control-modern:focus,
         select.form-control-modern:focus,
         textarea.form-control-modern:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+            box-shadow: var(--focus-ring);
             outline: none;
         }
         
@@ -690,19 +749,22 @@
         }
         
         /* Dense Professional Tables */
+        .table,
         .table-modern {
-            background: white;
-            border-radius: var(--border-radius-lg);
+            background: var(--surface-raised);
+            border-radius: 8px;
             overflow: hidden;
             box-shadow: var(--shadow-sm);
             font-size: var(--font-sm);
         }
         
+        .table thead,
         .table-modern thead {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
         }
         
+        .table th,
         .table-modern th {
             font-weight: 600;
             color: var(--text-primary);
@@ -713,6 +775,7 @@
             border: none;
         }
         
+        .table td,
         .table-modern td {
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
@@ -722,6 +785,7 @@
             font-size: var(--font-sm);
         }
         
+        .table tbody tr:hover,
         .table-modern tbody tr:hover {
             background: var(--bg-secondary);
         }
@@ -837,7 +901,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background:
+                radial-gradient(circle at 18% 16%, rgba(20, 184, 166, 0.34), transparent 28rem),
+                radial-gradient(circle at 80% 12%, rgba(79, 70, 229, 0.38), transparent 30rem),
+                linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             padding: 2rem;
             position: relative;
         }
@@ -854,8 +921,9 @@
         }
         
         .login-card {
-            background: white;
-            border-radius: var(--border-radius-lg);
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(255, 255, 255, 0.54);
+            border-radius: 8px;
             box-shadow: var(--shadow-xl);
             padding: 2.5rem;
             width: 100%;
@@ -946,7 +1014,11 @@
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .navbar-modern {
-                padding: 0 1rem;
+                padding: 0;
+            }
+
+            .navbar-container {
+                padding: 0 16px;
             }
             
             .navbar-nav {
@@ -958,7 +1030,7 @@
             }
             
             .main-content {
-                padding: 1rem;
+                padding: 14px;
             }
             
             .user-name {
@@ -975,6 +1047,41 @@
             
             .login-card {
                 padding: 2rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .page-actions {
+                flex-wrap: wrap;
+            }
+
+            .page-actions .btn {
+                flex: 1;
+                min-width: 140px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card-body,
+            .card-body-modern {
+                padding: 16px;
+            }
+
+            .table-responsive,
+            .table-modern {
+                overflow-x: auto;
+            }
+
+            .navbar-actions {
+                gap: 8px;
+            }
+
+            .user-profile-dropdown .user-info,
+            .user-profile-dropdown .bi-chevron-down {
+                display: none;
             }
         }
         
@@ -1039,6 +1146,16 @@
         .slide-in {
             animation: slideIn 0.3s ease;
         }
+
+        {% include "includes/flexible_ui.css" %}
+
+        * {
+            letter-spacing: 0 !important;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+    <style>
+        {% include "includes/flexible_ui.css" %}
     </style>
 </head>
 <body class="{% if request.user.dark_mode %}dark-mode{% endif %}" data-dark-mode="{% if request.user.dark_mode %}true{% else %}false{% endif %}">
@@ -1061,7 +1178,7 @@
                     </a>
                 </li>
                 
-                {% if request.user.is_superuser or request.user.is_staff %}
+                {% if request.user|has_module_access:"employees" %}
                 <li>
                     <a href="{% url 'accounts:employee-list' %}" class="nav-link {% if 'employee' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-people"></i>
@@ -1070,14 +1187,16 @@
                 </li>
                 {% endif %}
                 
+                {% if request.user|has_module_access:"fleet" %}
                 <li>
                     <a href="{% url 'fleet:car_list' %}" class="nav-link {% if 'fleet' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-truck"></i>
                         Fleet
                     </a>
                 </li>
+                {% endif %}
                 
-                {% if perms.warehouse.view_item %}
+                {% if request.user|has_module_access:"warehouse" %}
                 <li>
                     <a href="{% url 'warehouse:dashboard' %}" class="nav-link {% if 'warehouse' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-box-seam"></i>
@@ -1086,7 +1205,7 @@
                 </li>
                 {% endif %}
                 
-                {% if perms.interventions.view_intervention %}
+                {% if request.user|has_module_access:"interventions" %}
                 <li>
                     <a href="{% url 'interventions:intervention_list' %}" class="nav-link {% if 'interventions' in request.resolver_match.app_name and 'intervention_list' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-tools"></i>
@@ -1095,8 +1214,7 @@
                 </li>
                 {% endif %}
                 
-                <!-- Sites Map available to all logged-in users -->
-                {% if user.is_authenticated %}
+                {% if request.user|has_module_access:"sites_map" %}
                 <li>
                     <a href="{% url 'interventions:sites_map' %}" class="nav-link {% if 'interventions' in request.resolver_match.app_name and 'sites_map' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-map"></i>
@@ -1105,13 +1223,25 @@
                 </li>
                 {% endif %}
                 
+                {% if request.user|has_module_access:"leave" %}
                 <li>
                     <a href="{% url 'leave:leave_list' %}" class="nav-link {% if 'leave' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-calendar3"></i>
                         Leave
                     </a>
                 </li>
+                {% endif %}
 
+                {% if request.user|has_module_access:"attendance" %}
+                <li>
+                    <a href="{% url 'attendance:attendance_dashboard' %}" class="nav-link {% if 'attendance' in request.resolver_match.app_name %}active{% endif %}">
+                        <i class="bi bi-clock-history"></i>
+                        Attendance
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if request.user|has_module_access:"messages" %}
                 <li>
                     <a href="{% url 'accounts:message-inbox' %}" class="nav-link {% if 'message' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-envelope"></i>
@@ -1121,7 +1251,9 @@
                         {% endif %}
                     </a>
                 </li>
+                {% endif %}
 
+                {% if request.user|has_module_access:"announcements" %}
                 <li>
                     <a href="{% url 'accounts:announcement-list' %}" class="nav-link {% if 'announcement' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-megaphone"></i>
@@ -1131,8 +1263,9 @@
                         {% endif %}
                     </a>
                 </li>
+                {% endif %}
                 
-                {% if user.is_staff or user.role in 'admin,manager' %}
+                {% if request.user|has_module_access:"assignments" %}
                 <li>
                     <a href="{% url 'assignments:assignment-list' %}" class="nav-link {% if 'assignments' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-clipboard-check"></i>
@@ -1367,6 +1500,7 @@
         if (darkModeToggle) {
             darkModeToggle.addEventListener('click', function() {
                 const isDarkMode = document.body.classList.toggle('dark-mode');
+                document.body.dataset.darkMode = isDarkMode ? 'true' : 'false';
                 darkModeIcon.classList.toggle('bi-moon');
                 darkModeIcon.classList.toggle('bi-sun');
 
@@ -1390,5 +1524,6 @@
         }
     </script>
     {% endif %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -29,7 +29,10 @@ class WorkAssignmentForm(forms.ModelForm):
             'vehicle',
             'assignment_note',
             'status',
-            'scheduled_date'
+            'scheduled_date',
+            'site_address',
+            'site_latitude',
+            'site_longitude'
         ]
         widgets = {
             'assigned_to': forms.SelectMultiple(attrs={
@@ -46,6 +49,20 @@ class WorkAssignmentForm(forms.ModelForm):
             'scheduled_date': forms.DateTimeInput(attrs={
                 'class': 'form-control',
                 'type': 'datetime-local'
+            }),
+            'site_address': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter site address for directions'
+            }),
+            'site_latitude': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Latitude (e.g., 41.9028)',
+                'step': '0.00000001'
+            }),
+            'site_longitude': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Longitude (e.g., 12.4964)',
+                'step': '0.00000001'
             })
         }
     
@@ -67,6 +84,12 @@ class WorkAssignmentForm(forms.ModelForm):
         self.fields['assignment_note'].label = 'Assignment Instructions *'
         self.fields['status'].label = 'Status'
         self.fields['scheduled_date'].label = 'Scheduled Date (Optional)'
+        self.fields['site_address'].label = 'Site Address (Optional)'
+        self.fields['site_address'].help_text = 'Enter address for Google Maps directions'
+        self.fields['site_latitude'].label = 'Latitude (Optional)'
+        self.fields['site_latitude'].help_text = 'GPS latitude coordinate'
+        self.fields['site_longitude'].label = 'Longitude (Optional)'
+        self.fields['site_longitude'].help_text = 'GPS longitude coordinate'
     
     def clean_codice_nigit_input(self):
         """Validate and look up intervention by code"""

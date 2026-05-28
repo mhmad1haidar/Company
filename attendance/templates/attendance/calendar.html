@@ -1,0 +1,225 @@
+{% extends "base_modern.html" %}
+{% load static %}
+{% load attendance_filters %}
+
+{% block title %}Attendance Calendar{% endblock %}
+
+{% block extra_css %}
+<style>
+.calendar-day {
+    min-height: 100px;
+    border: 1px solid #dee2e6;
+    padding: 5px;
+}
+.calendar-day:hover {
+    background-color: #f8f9fa;
+}
+.present {
+    background-color: #d1fae5;
+}
+.late {
+    background-color: #fef3c7;
+}
+.absent {
+    background-color: #fee2e2;
+}
+.weekend {
+    background-color: #f3f4f6;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Attendance Calendar</h2>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="btn-group w-100" role="group">
+                        <a href="{% url 'attendance:attendance_dashboard' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                        <a href="{% url 'attendance:attendance_table' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-table"></i> Attendance Table
+                        </a>
+                        <a href="{% url 'attendance:calendar' %}" class="btn btn-primary">
+                            <i class="bi bi-calendar"></i> Calendar View
+                        </a>
+                        <a href="{% url 'attendance:monthly_report' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-file-earmark-bar-graph"></i> Monthly Report
+                        </a>
+                        {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'manager' %}
+                        <a href="{% url 'attendance:manual_entry' %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Manual Entry
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Month Navigation & Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-center">
+                        <div class="col-md-2">
+                            <label class="form-label">Month</label>
+                            <input type="month" name="month" class="form-control" value="{{ year }}-{{ month|stringformat:'02d' }}">
+                        </div>
+                        {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'manager' %}
+                        <div class="col-md-3">
+                            <label class="form-label">Employee</label>
+                            <select name="user" class="form-select">
+                                <option value="">All Employees</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>
+                                        {{ user.get_full_name|default:user.username }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <a href="?month={{ previous_month }}&year={{ previous_year }}{% if selected_user_id %}&user={{ selected_user_id }}{% endif %}" class="btn btn-outline-primary">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                                <a href="?month={{ next_month }}&year={{ next_year }}{% if selected_user_id %}&user={{ selected_user_id }}{% endif %}" class="btn btn-outline-primary">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">View</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="text-center mb-4">{{ month_name }} {{ year }} - Attendance Overview</h4>
+                    
+                    <!-- Employee Attendance Table -->
+                    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th class="sticky-start bg-dark" style="min-width: 150px;">Employee</th>
+                                    {% for week in calendar_days %}
+                                        {% for day in week %}
+                                            {% if day.day %}
+                                                <th class="text-center {% if day.is_weekend %}bg-secondary{% endif %}" style="min-width: 60px;">
+                                                    <div>{{ day.day }}</div>
+                                                    <div class="small">{{ day.date|date:"D" }}</div>
+                                                </th>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employee in employees %}
+                                <tr>
+                                    <td class="sticky-start bg-light" style="min-width: 150px;">
+                                        <strong>{{ employee.get_full_name|default:employee.username }}</strong>
+                                    </td>
+                                    {% for week in calendar_days %}
+                                        {% for day in week %}
+                                            {% if day.day %}
+                                                {% with employee_attendance=attendance_dict|get_item:employee.id %}
+                                                {% with day_attendance=employee_attendance|get_item:day.date %}
+                                                <td class="text-center {% if day.is_weekend %}bg-light text-muted{% endif %}" style="min-width: 60px;">
+                                                    {% if day.is_weekend %}
+                                                        <span class="badge bg-secondary">W</span>
+                                                    {% elif day_attendance %}
+                                                        {% if day_attendance.status == 'present' %}
+                                                            <span class="badge bg-success">P</span>
+                                                        {% elif day_attendance.status == 'late' %}
+                                                            <span class="badge bg-warning">L</span>
+                                                        {% elif day_attendance.status == 'absent' %}
+                                                            <span class="badge bg-danger">A</span>
+                                                        {% elif day_attendance.status == 'half_day' %}
+                                                            <span class="badge bg-info">H</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">{{ day_attendance.status }}</span>
+                                                        {% endif %}
+                                                        <div class="small" style="font-size: 10px;">
+                                                            {{ day_attendance.total_hours|default:"0" }}h
+                                                        </div>
+                                                    {% elif day.is_absence_expected %}
+                                                        <span class="badge bg-danger">A</span>
+                                                        <div class="small" style="font-size: 10px;">Absent</div>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                {% endwith %}
+                                                {% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Legend</h6>
+                    <div class="d-flex gap-3">
+                        <span><span class="badge bg-success">Present</span></span>
+                        <span><span class="badge bg-warning text-dark">Late</span></span>
+                        <span><span class="badge bg-danger">Absent</span></span>
+                        <span><span class="badge bg-secondary">Weekend</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calendar data will be loaded via AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const month = {{ month }};
+    const year = {{ year }};
+    const userId = {{ selected_user_id|default:'null' }};
+    
+    // Load calendar data
+    const url = '/attendance/calendar-data/?month=' + month + '&year=' + year;
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            // Update calendar with data
+            console.log('Calendar data loaded:', data);
+        })
+        .catch(error => console.error('Error loading calendar data:', error));
+});
+</script>
+{% endblock %}

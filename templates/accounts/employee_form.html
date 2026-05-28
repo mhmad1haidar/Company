@@ -161,6 +161,41 @@
                                 </div>
                             </div>
 
+                            <!-- Module Access -->
+                            <div class="col-md-12 mb-4">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-grid-3x3-gap me-2"></i>Module Access
+                                </h6>
+                                <div class="module-access-grid">
+                                    {% for checkbox in form.module_access %}
+                                    <label class="module-access-card">
+                                        {{ checkbox.tag }}
+                                        <span class="module-access-icon">
+                                            {% if checkbox.choice_label == "Employees" %}<i class="bi bi-people"></i>
+                                            {% elif checkbox.choice_label == "Attendance" %}<i class="bi bi-clock-history"></i>
+                                            {% elif checkbox.choice_label == "Leave" %}<i class="bi bi-calendar3"></i>
+                                            {% elif checkbox.choice_label == "Assignments" %}<i class="bi bi-clipboard-check"></i>
+                                            {% elif checkbox.choice_label == "Warehouse" %}<i class="bi bi-box-seam"></i>
+                                            {% elif checkbox.choice_label == "Fleet" %}<i class="bi bi-truck"></i>
+                                            {% elif checkbox.choice_label == "Interventions" %}<i class="bi bi-tools"></i>
+                                            {% elif checkbox.choice_label == "Sites Map" %}<i class="bi bi-map"></i>
+                                            {% elif checkbox.choice_label == "Messages" %}<i class="bi bi-envelope"></i>
+                                            {% else %}<i class="bi bi-megaphone"></i>{% endif %}
+                                        </span>
+                                        <span>{{ checkbox.choice_label }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted d-block mt-2">{{ form.module_access.help_text }}</small>
+                                {% if form.module_access.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.module_access.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
                             <!-- Password Fields (Only for Create) -->
                             {% if action == 'create' %}
                             <div class="col-md-12 mb-4">
@@ -290,6 +325,51 @@
 
 .text-primary {
     color: var(--primary) !important;
+}
+
+.module-access-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: .75rem;
+}
+
+.module-access-card {
+    align-items: center;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    gap: .65rem;
+    min-height: 48px;
+    padding: .75rem .85rem;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.module-access-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+    transform: translateY(-1px);
+}
+
+.module-access-card input {
+    margin: 0;
+}
+
+.module-access-icon {
+    align-items: center;
+    background: rgba(37, 99, 235, .1);
+    border-radius: 8px;
+    color: var(--primary);
+    display: inline-flex;
+    height: 30px;
+    justify-content: center;
+    width: 30px;
+}
+
+body.dark-mode .module-access-card {
+    background: #172033;
+    border-color: rgba(148, 163, 184, .25);
 }
 </style>
 {% endblock %}

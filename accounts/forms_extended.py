@@ -8,12 +8,18 @@ User = get_user_model()
 
 class EmployeeCreateForm(UserCreationForm):
     """Form for creating new employees with extended profile"""
+    module_access = forms.MultipleChoiceField(
+        choices=User.MODULE_ACCESS_CHOICES,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'module-access-input'}),
+        required=False,
+        label='Module Access',
+    )
     
     class Meta:
         model = User
         fields = [
             'username', 'password1', 'password2', 'email', 'first_name', 'last_name',
-            'role', 'employee_id', 'department', 'job_title', 'is_staff', 'is_active'
+            'role', 'employee_id', 'department', 'job_title', 'module_access', 'is_staff', 'is_active'
         ]
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
@@ -43,12 +49,14 @@ class EmployeeCreateForm(UserCreationForm):
         self.fields['job_title'].label = 'Job Title'
         self.fields['is_staff'].label = 'Staff Access (can manage employees)'
         self.fields['is_active'].label = 'Active Account'
+        self.fields['module_access'].help_text = 'Choose which main sections this employee can see in the menu.'
     
     def save(self, commit=True):
         employee = super().save(commit=False)
         # For create form, set default role if not specified
         if not employee.role:
             employee.role = User.Role.EMPLOYEE
+        employee.module_access = self.cleaned_data.get('module_access', [])
         if commit:
             employee.save()
         return employee
@@ -56,12 +64,18 @@ class EmployeeCreateForm(UserCreationForm):
 
 class EmployeeEditForm(forms.ModelForm):
     """Form for editing existing employees"""
+    module_access = forms.MultipleChoiceField(
+        choices=User.MODULE_ACCESS_CHOICES,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'module-access-input'}),
+        required=False,
+        label='Module Access',
+    )
     
     class Meta:
         model = User
         fields = [
             'username', 'email', 'first_name', 'last_name',
-            'role', 'employee_id', 'job_title', 'is_staff', 'is_superuser', 'is_active'
+            'role', 'employee_id', 'job_title', 'module_access', 'is_staff', 'is_superuser', 'is_active'
         ]
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
@@ -78,6 +92,8 @@ class EmployeeEditForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['module_access'].initial = self.instance.module_access or []
         
         # Add custom labels
         self.fields['username'].label = 'Username *'
@@ -90,6 +106,7 @@ class EmployeeEditForm(forms.ModelForm):
         self.fields['is_staff'].label = 'Staff Access (can manage employees)'
         self.fields['is_superuser'].label = 'Superuser (full admin access)'
         self.fields['is_active'].label = 'Active Account'
+        self.fields['module_access'].help_text = 'Choose which main sections this employee can see in the menu.'
     
     def save(self, commit=True):
         employee = super().save(commit=False)
@@ -115,6 +132,7 @@ class EmployeeEditForm(forms.ModelForm):
         # Handle manual is_active toggle - if user manually activates an ex-employee, change role to employee
         if self.instance.pk and self.instance.is_active == False and employee.is_active == True and employee.role == User.Role.EX_EMPLOYEE:
             employee.role = User.Role.EMPLOYEE
+        employee.module_access = self.cleaned_data.get('module_access', [])
         
         if commit:
             employee.save()

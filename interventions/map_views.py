@@ -126,6 +126,72 @@ def clear_sites_cache(request):
 @csrf_exempt
 @require_POST
 @login_required
+def import_sites_json(request):
+    """
+    Import sites from telecom_sites.json file into database - ADMIN ONLY
+    """
+    is_admin = request.user.is_superuser or request.user.is_staff
+    
+    if not is_admin:
+        return JsonResponse({'error': 'Only administrators can import sites'}, status=403)
+    
+    try:
+        import os
+        json_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'telecom_sites.json')
+        
+        with open(json_file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        sites_data = data.get('sites', [])
+        imported_count = 0
+        updated_count = 0
+        
+        for site_data in sites_data:
+            # Check if site already exists
+            existing_site = TelecomSite.objects.filter(site_code=site_data.get('site_code')).first()
+            
+            if existing_site:
+                # Update existing site
+                existing_site.site_name = site_data.get('site_name', existing_site.site_name)
+                existing_site.area = site_data.get('area', existing_site.area)
+                existing_site.region = site_data.get('region', existing_site.region)
+                existing_site.province = site_data.get('province', existing_site.province)
+                existing_site.city = site_data.get('city', existing_site.city)
+                existing_site.address = site_data.get('address', existing_site.address)
+                existing_site.latitude = float(site_data.get('latitude', existing_site.latitude))
+                existing_site.longitude = float(site_data.get('longitude', existing_site.longitude))
+                existing_site.save()
+                updated_count += 1
+            else:
+                # Create new site
+                TelecomSite.objects.create(
+                    site_name=site_data.get('site_name', ''),
+                    site_code=site_data.get('site_code', ''),
+                    area=site_data.get('area', ''),
+                    region=site_data.get('region', ''),
+                    province=site_data.get('province', ''),
+                    city=site_data.get('city', ''),
+                    address=site_data.get('address', ''),
+                    latitude=float(site_data.get('latitude', 0)),
+                    longitude=float(site_data.get('longitude', 0)),
+                    created_by=request.user
+                )
+                imported_count += 1
+        
+        # Clear cache
+        cache.delete('telecom_sites_cache')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Imported {imported_count} new sites, updated {updated_count} existing sites',
+            'imported': imported_count,
+            'updated': updated_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 def import_sites_csv(request):
     """
     Handle CSV file upload and import sites data - ADMIN ONLY

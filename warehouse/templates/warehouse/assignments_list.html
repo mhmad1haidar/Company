@@ -1,0 +1,267 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Assign Materials - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    {% include "warehouse/includes/warehouse_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Assign Materials</h1>
+            <p>Assign items and serial numbers to users</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'warehouse:dashboard' %}" class="btn btn-outline-modern"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a>
+            <a href="{% url 'warehouse:item_list' %}" class="btn btn-outline-modern"><i class="bi bi-box-seam me-2"></i> Items</a>
+            <div class="dropdown warehouse-export-dropdown">
+                <button class="btn btn-success-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download me-2"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end export-menu">
+                    <li><a class="dropdown-item" href="{% url 'warehouse:export_assignment_overview' 'excel' %}?{{ request.GET.urlencode }}"><i class="bi bi-file-earmark-excel me-2"></i> Excel</a></li>
+                    <li><a class="dropdown-item" href="{% url 'warehouse:export_assignment_overview' 'csv' %}?{{ request.GET.urlencode }}"><i class="bi bi-filetype-csv me-2"></i> CSV</a></li>
+                    <li><a class="dropdown-item" href="{% url 'warehouse:export_assignment_overview' 'pdf' %}?{{ request.GET.urlencode }}"><i class="bi bi-file-earmark-pdf me-2"></i> PDF</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card-modern mb-4">
+        <div class="card-body-modern">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Search Serial</label>
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Enter serial number" value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All Status</option>
+                        <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+                        <option value="assigned" {% if request.GET.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                        <option value="in_use" {% if request.GET.status == 'in_use' %}selected{% endif %}>In Use</option>
+                        <option value="damaged" {% if request.GET.status == 'damaged' %}selected{% endif %}>Damaged</option>
+                        <option value="lost" {% if request.GET.status == 'lost' %}selected{% endif %}>Lost</option>
+                        <option value="maintenance" {% if request.GET.status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Assigned To</label>
+                    <select name="user" class="form-select form-select-sm">
+                        <option value="">All Users</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if request.GET.user|add:"0" == user.id %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search me-1"></i> Filter</button>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">&nbsp;</label>
+                    <a href="{% url 'warehouse:assignments_list' %}" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-x-circle me-1"></i> Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Serial Numbers Section -->
+    <div class="card-modern mb-4">
+        <div class="card-body-modern">
+            <h5 class="card-title-modern mb-3"><i class="bi bi-upc-scan me-2"></i>Serial Numbers</h5>
+            {% if serial_numbers %}
+            <div class="table-responsive">
+                <table class="table table-modern table-sm">
+                    <thead>
+                        <tr>
+                            <th>Serial Number</th>
+                            <th>Item</th>
+                            <th>Status</th>
+                            <th>Assigned To</th>
+                            <th>Assigned At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for serial in serial_numbers %}
+                        <tr>
+                            <td><strong>{{ serial.serial_number }}</strong></td>
+                            <td>{{ serial.item.code }} - {{ serial.item.name }}</td>
+                            <td>
+                                <span class="badge bg-{% if serial.status == 'available' %}success{% elif serial.status == 'assigned' %}warning{% elif serial.status == 'in_use' %}info{% elif serial.status == 'damaged' %}danger{% else %}secondary{% endif %}">
+                                    {{ serial.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{% if serial.assigned_to %}{{ serial.assigned_to.get_full_name|default:serial.assigned_to.username }}{% else %}-{% endif %}</td>
+                            <td>{{ serial.assigned_at|date:"d/m/Y H:i"|default:"-" }}</td>
+                            <td>
+                                {% if serial.status == 'available' %}
+                                <form method="post" action="{% url 'warehouse:assign_serial' serial.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <select name="assigned_to" class="form-select form-select-sm d-inline-block" style="width: auto;" required>
+                                        <option value="">Select User</option>
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-primary">Assign</button>
+                                </form>
+                                {% elif serial.status == 'assigned' %}
+                                <div class="btn-group">
+                                    <form method="post" action="{% url 'warehouse:assign_serial' serial.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <select name="assigned_to" class="form-select form-select-sm d-inline-block" style="width: auto;" required>
+                                            <option value="">Reassign to...</option>
+                                            {% for user in users %}
+                                            <option value="{{ user.id }}" {% if serial.assigned_to.id == user.id %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-info">Reassign</button>
+                                    </form>
+                                    <form method="post" action="{% url 'warehouse:unassign_serial' serial.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-warning">Unassign</button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-upc-scan"></i>
+                <h5>No serial numbers found</h5>
+                <p class="text-muted">Add serial numbers to items to track individual items.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Item Assignments Section -->
+    <div class="card-modern">
+        <div class="card-body-modern">
+            <h5 class="card-title-modern mb-3"><i class="bi bi-people me-2"></i>Item Assignments</h5>
+            {% if assignments %}
+            <div class="table-responsive">
+                <table class="table table-modern table-sm">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Notes</th>
+                            <th>Assigned By</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assignments %}
+                        <tr>
+                            <td><strong>{{ assignment.user.get_full_name|default:assignment.user.username }}</strong></td>
+                            <td>
+                                <strong>{{ assignment.item.name }}</strong><br>
+                                <small class="text-muted">{{ assignment.item.code }}</small>
+                            </td>
+                            <td>{{ assignment.quantity_assigned }}</td>
+                            <td>{{ assignment.notes|default:"-" }}</td>
+                            <td>{{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</td>
+                            <td>{{ assignment.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h5>No assignments found</h5>
+                <p class="text-muted">No material assignments have been created yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+        <div class="btn-group">
+            {% if page_obj.has_previous %}
+            <a class="btn btn-sm btn-outline-modern" href="?page={{ page_obj.previous_page_number }}{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.item %}&item={{ request.GET.item }}{% endif %}"><i class="bi bi-chevron-left"></i> Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn btn-sm btn-primary-modern" href="?page={{ page_obj.next_page_number }}{% if request.GET.user %}&user={{ request.GET.user }}{% endif %}{% if request.GET.item %}&item={{ request.GET.item }}{% endif %}">Next <i class="bi bi-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.page-header .page-actions {
+    flex-wrap: wrap !important;
+    justify-content: flex-end;
+}
+
+.warehouse-export-dropdown .btn-success-modern {
+    background: #047857 !important;
+    border-color: #047857 !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px -16px rgba(4, 120, 87, .75) !important;
+}
+
+.warehouse-export-dropdown .btn-success-modern:hover,
+.warehouse-export-dropdown .btn-success-modern:focus {
+    background: #065f46 !important;
+    border-color: #065f46 !important;
+    color: #ffffff !important;
+}
+
+.warehouse-export-dropdown .export-menu {
+    min-width: 170px;
+    border: 1px solid rgba(148, 163, 184, .26);
+    border-radius: 8px;
+    box-shadow: 0 18px 38px -26px rgba(15, 23, 42, .45);
+}
+
+.warehouse-export-dropdown .dropdown-item {
+    align-items: center;
+    display: flex;
+    font-size: 13px;
+    font-weight: 700;
+    gap: 4px;
+    min-height: 34px;
+}
+
+.warehouse-export-dropdown .dropdown-item i {
+    color: #047857;
+}
+
+body.dark-mode .warehouse-export-dropdown .export-menu {
+    background: #0f1d2d;
+    border-color: #263b52;
+}
+
+body.dark-mode .warehouse-export-dropdown .dropdown-item {
+    color: #dbeafe;
+}
+
+body.dark-mode .warehouse-export-dropdown .dropdown-item:hover {
+    background: #132f45;
+}
+
+@media (max-width: 576px) {
+    .page-header .page-actions,
+    .page-header .page-actions > a,
+    .page-header .warehouse-export-dropdown,
+    .page-header .warehouse-export-dropdown > button {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

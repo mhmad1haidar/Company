@@ -1,0 +1,71 @@
+{% extends "base_modern.html" %}
+
+{% block title %}{{ batch.batch_number }} - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="card-modern mb-4">
+        <div class="card-body-modern py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h4 class="mb-1">{{ batch.batch_number }}</h4>
+                    <p class="text-muted mb-0 small">{{ batch.item.code }} - {{ batch.item.name }}</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'warehouse:dashboard' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="{% url 'warehouse:batch_list' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-list"></i> Batches
+                    </a>
+                    <a href="{% url 'warehouse:batch_update' batch.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern"><i class="bi bi-info-circle me-2"></i> Batch Details</h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-modern">
+                        <tr><td class="text-muted">Batch #</td><td><strong>{{ batch.batch_number }}</strong></td></tr>
+                        <tr><td class="text-muted">Item</td><td>{{ batch.item.code }} - {{ batch.item.name }}</td></tr>
+                        <tr><td class="text-muted">Quantity</td><td>{{ batch.quantity }}</td></tr>
+                        <tr><td class="text-muted">Mfg Date</td><td>{{ batch.manufacturing_date|default:"-"|date:"Y-m-d" }}</td></tr>
+                        <tr><td class="text-muted">Exp Date</td><td>{{ batch.expiration_date|default:"-"|date:"Y-m-d" }}</td></tr>
+                        <tr><td class="text-muted">Supplier</td><td>{{ batch.supplier.name|default:"-" }}</td></tr>
+                        <tr><td class="text-muted">Created</td><td>{{ batch.created_at|date:"Y-m-d" }}</td></tr>
+                    </table>
+                    {% if batch.notes %}
+                    <div class="mt-3 pt-3 border-top">
+                        <p class="text-muted small mb-0">Notes</p>
+                        <p>{{ batch.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern"><i class="bi bi-info-circle me-2"></i> Item Information</h5>
+                </div>
+                <div class="card-body-modern">
+                    <table class="table table-modern">
+                        <tr><td class="text-muted">Code</td><td><strong>{{ batch.item.code }}</strong></td></tr>
+                        <tr><td class="text-muted">Name</td><td>{{ batch.item.name }}</td></tr>
+                        <tr><td class="text-muted">Category</td><td>{{ batch.item.category.name|default:"-" }}</td></tr>
+                        <tr><td class="text-muted">Current Stock</td><td>{{ batch.item.quantity }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

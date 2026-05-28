@@ -1,0 +1,313 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Warehouse Items - Platform{% endblock %}
+
+{% block content %}
+<div class="main-content warehouse-items-page">
+    {% include "warehouse/includes/warehouse_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Warehouse Items</h1>
+            <p>Search, filter, and manage inventory items.</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'warehouse:movement_create' %}" class="btn btn-outline-modern">
+                <i class="bi bi-plus-square me-2"></i> Record Stock
+            </a>
+            <a href="{% url 'warehouse:item_create' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i> Add Item
+            </a>
+        </div>
+    </div>
+
+    <div class="warehouse-quick-filters mb-3">
+        <a href="{% url 'warehouse:item_list' %}" class="quick-filter {% if not request.GET.stock_status and not request.GET.search %}active{% endif %}">
+            <i class="bi bi-grid"></i> All
+        </a>
+        <a href="{% url 'warehouse:item_list' %}?stock_status=low_stock" class="quick-filter {% if request.GET.stock_status == 'low_stock' %}active{% endif %}">
+            <i class="bi bi-exclamation-triangle"></i> Low Stock
+        </a>
+        <a href="{% url 'warehouse:item_list' %}?stock_status=out_of_stock" class="quick-filter {% if request.GET.stock_status == 'out_of_stock' %}active{% endif %}">
+            <i class="bi bi-x-circle"></i> Out of Stock
+        </a>
+        <a href="{% url 'warehouse:item_list' %}?stock_status=negative_stock" class="quick-filter {% if request.GET.stock_status == 'negative_stock' %}active{% endif %}">
+            <i class="bi bi-dash-circle"></i> Negative
+        </a>
+        <a href="{% url 'warehouse:item_list' %}?stock_status=in_transit" class="quick-filter {% if request.GET.stock_status == 'in_transit' %}active{% endif %}">
+            <i class="bi bi-truck-front"></i> In Transit
+        </a>
+        <a href="{% url 'warehouse:item_list' %}?stock_status=missing_location" class="quick-filter {% if request.GET.stock_status == 'missing_location' %}active{% endif %}">
+            <i class="bi bi-geo-alt"></i> Missing Location
+        </a>
+    </div>
+
+    <div class="card-modern warehouse-filter-card mb-3">
+        <div class="card-body-modern">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control form-control-sm" value="{{ request.GET.search }}" placeholder="Code, name, location">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Zone</label>
+                    <select name="zone" class="form-select">
+                        <option value="">All zones</option>
+                        {% for zone in zones %}
+                        <option value="{{ zone.id }}" {% if request.GET.zone == zone.id|stringformat:"s" %}selected{% endif %}>{{ zone.code }} - {{ zone.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Supplier</label>
+                    <select name="supplier" class="form-select">
+                        <option value="">All suppliers</option>
+                        {% for supplier in suppliers %}
+                        <option value="{{ supplier.id }}" {% if request.GET.supplier == supplier.id|stringformat:"s" %}selected{% endif %}>{{ supplier.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Stock</label>
+                    <select name="stock_status" class="form-select">
+                        <option value="">All stock</option>
+                        <option value="in_stock" {% if request.GET.stock_status == "in_stock" %}selected{% endif %}>In Stock</option>
+                        <option value="low_stock" {% if request.GET.stock_status == "low_stock" %}selected{% endif %}>Low Stock</option>
+                        <option value="out_of_stock" {% if request.GET.stock_status == "out_of_stock" %}selected{% endif %}>Out of Stock</option>
+                        <option value="negative_stock" {% if request.GET.stock_status == "negative_stock" %}selected{% endif %}>Negative Stock</option>
+                        <option value="in_transit" {% if request.GET.stock_status == "in_transit" %}selected{% endif %}>In Transit</option>
+                        <option value="missing_location" {% if request.GET.stock_status == "missing_location" %}selected{% endif %}>Missing Location</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All status</option>
+                        {% for value,label in status_choices %}
+                        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sort</label>
+                    <select name="sort" class="form-select">
+                        <option value="code" {% if request.GET.sort == "code" or not request.GET.sort %}selected{% endif %}>Code A-Z</option>
+                        <option value="-code" {% if request.GET.sort == "-code" %}selected{% endif %}>Code Z-A</option>
+                        <option value="name" {% if request.GET.sort == "name" %}selected{% endif %}>Name A-Z</option>
+                        <option value="-name" {% if request.GET.sort == "-name" %}selected{% endif %}>Name Z-A</option>
+                        <option value="quantity" {% if request.GET.sort == "quantity" %}selected{% endif %}>Qty Low-High</option>
+                        <option value="-quantity" {% if request.GET.sort == "-quantity" %}selected{% endif %}>Qty High-Low</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-sm btn-primary-modern"><i class="bi bi-search"></i></button>
+                        <a href="{% url 'warehouse:item_list' %}" class="btn btn-outline-modern"><i class="bi bi-x-circle"></i></a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-modern warehouse-items-card">
+        <div class="card-header-modern d-flex align-items-center justify-content-between">
+            <h5 class="card-title-modern mb-0"><i class="bi bi-box-seam me-2"></i> Items</h5>
+            {% if page_obj %}
+            <span class="warehouse-count">{{ page_obj.paginator.count }} items</span>
+            {% endif %}
+        </div>
+        <div class="card-body-modern">
+            {% if items %}
+            <form method="post" action="{% url 'warehouse:bulk_update_items' %}" class="bulk-update-panel mb-3" id="bulkUpdateForm">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <div class="bulk-update-summary">
+                    <strong><span id="selectedCount">0</span> selected</strong>
+                    <small>Update selected rows</small>
+                </div>
+                <select name="bulk_field" class="form-select form-select-sm bulk-field-select" id="bulkField">
+                    <option value="">Choose field</option>
+                    <option value="location">Location</option>
+                    <option value="category">Category</option>
+                    <option value="zone">Zone</option>
+                    <option value="status">Status</option>
+                </select>
+                <input type="text" name="bulk_value" class="form-control form-control-sm bulk-value-control bulk-value-text" id="bulkTextValue" placeholder="New value">
+                <select class="form-select form-select-sm bulk-value-control d-none" id="bulkCategoryValue" disabled>
+                    <option value="">No category</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+                <select class="form-select form-select-sm bulk-value-control d-none" id="bulkZoneValue" disabled>
+                    <option value="">No zone</option>
+                    {% for zone in zones %}
+                    <option value="{{ zone.id }}">{{ zone.code }} - {{ zone.name }}</option>
+                    {% endfor %}
+                </select>
+                <select class="form-select form-select-sm bulk-value-control d-none" id="bulkStatusValue" disabled>
+                    {% for value,label in status_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary-modern">
+                    <i class="bi bi-check2-circle me-1"></i> Apply
+                </button>
+            </form>
+            <div class="table-responsive">
+                <table class="table table-modern warehouse-items-table">
+                    <thead>
+                        <tr class="{% if item.quantity < 0 %}stock-row-negative{% elif item.quantity == 0 %}stock-row-empty{% elif item.is_low_stock %}stock-row-low{% endif %}">
+                            <th><input type="checkbox" class="form-check-input" id="selectAllItems" aria-label="Select all visible items"></th>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Supplier</th>
+                            <th>Unit</th>
+                            <th>Qty</th>
+                            <th>In</th>
+                            <th>Used</th>
+                            <th>Transit</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input item-select-checkbox" name="item_ids" value="{{ item.pk }}" form="bulkUpdateForm" aria-label="Select {{ item.code }}">
+                            </td>
+                            <td><strong>{{ item.code }}</strong></td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.category.name|default:"-" }}</td>
+                            <td>
+                                {% for supplier_detail in item.supplier_details.all %}
+                                {{ supplier_detail.supplier.name }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}-{% endfor %}
+                            </td>
+                            <td>{{ item.unit_of_measure|default:"-" }}</td>
+                            <td><span class="badge {% if item.quantity == 0 %}bg-danger{% elif item.is_low_stock %}bg-warning{% else %}bg-success{% endif %}">{{ item.quantity }}</span></td>
+                            <td>
+                                <input type="number" min="0" name="incoming_quantity" value="{{ item.incoming_quantity }}" class="form-control form-control-sm inline-stock-input" form="stock-form-{{ item.pk }}" aria-label="Incoming quantity for {{ item.code }}">
+                            </td>
+                            <td>
+                                <input type="number" min="0" name="used_quantity" value="{{ item.used_quantity }}" class="form-control form-control-sm inline-stock-input" form="stock-form-{{ item.pk }}" aria-label="Used quantity for {{ item.code }}">
+                            </td>
+                            <td>{{ item.in_transit_quantity }}</td>
+                            <td><span class="badge bg-light text-dark">{{ item.stock_status }}</span></td>
+                            <td>{{ item.location|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <form id="stock-form-{{ item.pk }}" method="post" action="{% url 'warehouse:update_item_stock_inline' item.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-modern" title="Save In and Used" aria-label="Save stock for {{ item.code }}">
+                                            <i class="bi bi-check2"></i>
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'warehouse:item_detail' item.pk %}" class="btn btn-sm btn-outline-modern" title="Open item"><i class="bi bi-eye"></i></a>
+                                    <a href="{% url 'warehouse:item_update' item.pk %}" class="btn btn-sm btn-primary-modern" title="Edit item"><i class="bi bi-pencil"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-box-seam"></i>
+                <h5>No items found</h5>
+                <p>Add your first warehouse item or adjust the filters.</p>
+                <a href="{% url 'warehouse:item_create' %}" class="btn btn-primary-modern">Add Item</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+        <div class="btn-group">
+            {% if page_obj.has_previous %}
+            <a class="btn btn-sm btn-outline-modern" href="?page={{ page_obj.previous_page_number }}"><i class="bi bi-chevron-left"></i> Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn btn-sm btn-primary-modern" href="?page={{ page_obj.next_page_number }}">Next <i class="bi bi-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAllItems');
+    const checkboxes = Array.from(document.querySelectorAll('.item-select-checkbox'));
+    const selectedCount = document.getElementById('selectedCount');
+    const bulkField = document.getElementById('bulkField');
+    const controls = {
+        location: document.getElementById('bulkTextValue'),
+        category: document.getElementById('bulkCategoryValue'),
+        zone: document.getElementById('bulkZoneValue'),
+        status: document.getElementById('bulkStatusValue')
+    };
+
+    function updateCount() {
+        const count = checkboxes.filter(checkbox => checkbox.checked).length;
+        if (selectedCount) {
+            selectedCount.textContent = count;
+        }
+        if (selectAll) {
+            selectAll.checked = count > 0 && count === checkboxes.length;
+            selectAll.indeterminate = count > 0 && count < checkboxes.length;
+        }
+    }
+
+    function showBulkValueControl() {
+        const selectedField = bulkField ? bulkField.value : '';
+        Object.values(controls).forEach(control => {
+            if (!control) return;
+            control.classList.add('d-none');
+            control.disabled = true;
+            control.removeAttribute('name');
+        });
+
+        const control = controls[selectedField] || controls.location;
+        if (control) {
+            control.classList.remove('d-none');
+            control.disabled = false;
+            control.setAttribute('name', 'bulk_value');
+            control.placeholder = selectedField === 'location' ? 'New location' : 'New value';
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+            updateCount();
+        });
+    }
+
+    checkboxes.forEach(checkbox => checkbox.addEventListener('change', updateCount));
+    if (bulkField) {
+        bulkField.addEventListener('change', showBulkValueControl);
+        showBulkValueControl();
+    }
+    updateCount();
+});
+</script>
+{% endblock %}

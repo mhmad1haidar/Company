@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_modern.html" %}
 {% load static %}
 
 {% block title %}My Assignments{% endblock %}
@@ -179,6 +179,46 @@ function deleteAssignment(pk, assignmentCode) {
     }
 }
 
+function getDirections(pk, internationalCode) {
+    console.log('Getting directions for assignment:', { pk, internationalCode });
+    
+    // Get directions from the backend which looks up TelecomSite by international_code
+    const url = `/assignments/assignment/${pk}/get-directions/`;
+    
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.directions_url) {
+            // Open Google Maps directly with the directions URL
+            window.open(data.directions_url, '_blank');
+        } else {
+            // No location data available - show alert
+            alert('No location information available for this assignment. Please check if the site exists in the TelecomSite database with coordinates.');
+        }
+    })
+    .catch(error => {
+        console.error('Error getting directions:', error);
+        alert('An error occurred while getting directions. Please try again.');
+    });
+}
+
+// Add event listeners for direction buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const directionButtons = document.querySelectorAll('.directions-btn');
+    directionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const pk = this.getAttribute('data-pk');
+            const internationalCode = this.getAttribute('data-international-code');
+            getDirections(pk, internationalCode);
+        });
+    });
+});
+
 console.log('My Assignments page - JavaScript loaded');
 </script>
 
@@ -320,6 +360,11 @@ console.log('My Assignments page - JavaScript loaded');
                                         </li>
                                     </ul>
                                 </div>
+                                <button class="btn btn-sm btn-primary-modern directions-btn" 
+                                        data-pk="{{ assignment.pk }}" 
+                                        data-international-code="{{ assignment.intervention.international_code|default:"" }}">
+                                    <i class="bi bi-directions"></i> Directions
+                                </button>
                                 <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-modern">
                                     View Details
                                 </a>
@@ -529,6 +574,11 @@ console.log('My Assignments page - JavaScript loaded');
                                         </li>
                                     </ul>
                                 </div>
+                                <button class="btn btn-sm btn-primary-modern directions-btn" 
+                                        data-pk="{{ assignment.pk }}" 
+                                        data-international-code="{{ assignment.intervention.international_code|default:"" }}">
+                                    <i class="bi bi-directions"></i> Directions
+                                </button>
                                 <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-modern">
                                     View Details
                                 </a>
@@ -631,6 +681,11 @@ console.log('My Assignments page - JavaScript loaded');
                                         </li>
                                     </ul>
                                 </div>
+                                <button class="btn btn-sm btn-primary-modern directions-btn" 
+                                        data-pk="{{ assignment.pk }}" 
+                                        data-international-code="{{ assignment.intervention.international_code|default:"" }}">
+                                    <i class="bi bi-directions"></i> Directions
+                                </button>
                                 <a href="{% url 'assignments:assignment-detail' assignment.pk %}" class="btn btn-sm btn-outline-modern">
                                     View Details
                                 </a>

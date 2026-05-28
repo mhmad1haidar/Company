@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 from . import profile_views
 from . import views_employee
+from . import views_google_drive
 
 app_name = "accounts"
 
@@ -58,4 +59,7 @@ urlpatterns = [
     path("departments/", views_employee.department_list, name="department-list"),
     path("departments/create/", views_employee.department_create, name="department-create"),
     path("departments/<int:pk>/edit/", views_employee.department_edit, name="department-edit"),
+    
+    # Google Drive file serving
+    path("media/google-drive/<str:file_id>/", views_google_drive.serve_google_drive_file, name="serve-google-drive-file"),
 ]

@@ -1,0 +1,41 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Record Stock Movement - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    {% include "warehouse/includes/warehouse_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Record Stock Movement</h1>
+            <p>Add incoming stock, outgoing stock, or a counted adjustment.</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'warehouse:movement_list' %}" class="btn btn-outline-modern"><i class="bi bi-arrow-left me-2"></i> Movements</a>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-body-modern">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    {% for field in form %}
+                    <div class="{% if field.name == 'notes' %}col-12{% else %}col-md-6{% endif %} mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<small class="text-muted">{{ field.help_text }}</small>{% endif %}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="page-actions">
+                    <button type="submit" class="btn btn-primary-modern"><i class="bi bi-check-circle me-2"></i> Save Movement</button>
+                    <a href="{% url 'warehouse:movement_list' %}" class="btn btn-outline-modern">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -126,8 +126,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         try:
             from leave.models import LeaveRequest
             context["pending_leave_requests"] = LeaveRequest.objects.filter(status='pending').count()
+            context["my_pending_leave_requests"] = LeaveRequest.objects.filter(
+                user=self.request.user, status='pending'
+            ).count()
         except ImportError:
             context["pending_leave_requests"] = 0
+            context["my_pending_leave_requests"] = 0
         
         # Work assignments statistics (from assignments app)
         try:
@@ -252,6 +256,33 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context["user_assigned"] = 0
             context["show_all_users"] = False
         
+        # Load user's enabled widgets
+        user = self.request.user
+        user_role = getattr(user, "role", "")
+        can_manage_people = user.is_superuser or user.is_staff
+        can_manage_leave = user.is_superuser or user.is_staff or user_role in [User.Role.ADMIN, User.Role.MANAGER]
+        can_manage_assignments = user.is_superuser or user.is_staff or user.has_perm('assignments.view_all_assignments')
+        can_manage_interventions = user.is_superuser or user.is_staff or user_role in [User.Role.ADMIN, User.Role.MANAGER]
+
+        context["can_manage_people"] = can_manage_people
+        context["can_manage_leave"] = can_manage_leave
+        context["can_manage_assignments"] = can_manage_assignments
+        context["can_manage_interventions"] = can_manage_interventions
+
+        # Use user-safe numbers for regular users.
+        context["dashboard_assignment_count"] = (
+            context.get("active_assignments", 0) if can_manage_assignments else context.get("user_assignments", 0)
+        )
+        context["dashboard_pending_assignment_count"] = (
+            context.get("pending_assignments", 0) if can_manage_assignments else context.get("user_pending", 0)
+        )
+        context["dashboard_in_progress_assignment_count"] = (
+            context.get("in_progress_assignments", 0) if can_manage_assignments else context.get("user_in_progress", 0)
+        )
+        context["dashboard_leave_count"] = (
+            context.get("pending_leave_requests", 0) if can_manage_leave else context.get("my_pending_leave_requests", 0)
+        )
+
         # Load user's enabled widgets
         user_widgets = UserWidget.objects.filter(
             user=self.request.user,
@@ -403,8 +434,28 @@ class AnnouncementCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
+        response = super().form_valid(form)
+        announcement = self.object
+        recipients = User.objects.filter(is_active=True).exclude(pk=self.request.user.pk)
+        if announcement.target_audience == 'staff':
+            recipients = recipients.filter(is_staff=True)
+        elif announcement.target_audience == 'managers':
+            recipients = recipients.filter(models.Q(is_staff=True) | models.Q(role=User.Role.MANAGER))
+        elif announcement.target_audience == 'admin':
+            recipients = recipients.filter(models.Q(is_superuser=True) | models.Q(role=User.Role.ADMIN))
+
+        Notification.objects.bulk_create([
+            Notification(
+                recipient=user,
+                notification_type=Notification.NotificationType.SYSTEM,
+                title="New Announcement",
+                message=announcement.title,
+                link=f"/accounts/announcements/{announcement.pk}/",
+            )
+            for user in recipients
+        ])
         messages.success(self.request, 'Announcement created successfully')
-        return super().form_valid(form)
+        return response
 
 
 class AnnouncementUpdateView(LoginRequiredMixin, UpdateView):
@@ -539,9 +590,19 @@ class MessageComposeView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
+        message = form.save(commit=False)
+        message.sender = self.request.user
+        message.save()
+        Notification.objects.create(
+            recipient=message.recipient,
+            notification_type=Notification.NotificationType.SYSTEM,
+            title="New Message",
+            message=f"{message.sender.get_full_name() or message.sender.username}: {message.subject}",
+            link=f"/accounts/messages/{message.pk}/",
+        )
         form.instance.sender = self.request.user
         messages.success(self.request, 'Message sent successfully')
-        return super().form_valid(form)
+        return redirect(self.success_url)
 
 
 class MessageReplyView(LoginRequiredMixin, CreateView):
@@ -564,10 +625,20 @@ class MessageReplyView(LoginRequiredMixin, CreateView):
         }
 
     def form_valid(self, form):
-        form.instance.sender = self.request.user
-        form.instance.parent_message_id = self.kwargs['pk']
+        parent_message = get_object_or_404(Message, pk=self.kwargs['pk'])
+        reply = form.save(commit=False)
+        reply.sender = self.request.user
+        reply.parent_message = parent_message
+        reply.save()
+        Notification.objects.create(
+            recipient=reply.recipient,
+            notification_type=Notification.NotificationType.SYSTEM,
+            title="Message Reply",
+            message=f"{reply.sender.get_full_name() or reply.sender.username}: {reply.subject}",
+            link=f"/accounts/messages/{parent_message.pk}/",
+        )
         messages.success(self.request, 'Reply sent successfully')
-        return super().form_valid(form)
+        return redirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse_lazy('accounts:message-detail', kwargs={'pk': self.kwargs['pk']})

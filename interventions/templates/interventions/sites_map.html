@@ -128,6 +128,31 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Multi-stop route planner -->
+                        <button type="button" class="route-planner-toggle" id="routePlannerToggle" onclick="toggleRoutePlanner()">
+                            <i class="bi bi-signpost-2"></i>
+                            Route
+                        </button>
+                        <div class="route-planner-panel collapsed" id="routePlannerPanel">
+                            <div class="route-planner-head">
+                                <span class="route-planner-title"><i class="bi bi-signpost-2"></i> Route</span>
+                            </div>
+                            <textarea id="routeAddresses" class="form-control route-input" rows="3" placeholder="Codice SITO or address, one per line"></textarea>
+                            <div id="routeStopsList" class="route-stops-list"></div>
+                            <div class="route-planner-actions">
+                                <button type="button" class="route-action primary" onclick="openMultiStopDirections()">
+                                    <i class="bi bi-navigation"></i> Google
+                                </button>
+                                <button type="button" class="route-action success" onclick="drawRouteOnMap()">
+                                    <i class="bi bi-bezier2"></i> Line + Time
+                                </button>
+                                <button type="button" class="route-action ghost" onclick="clearRouteStops()">
+                                    <i class="bi bi-x-lg"></i> Clear
+                                </button>
+                            </div>
+                            <div id="routeSummary" class="route-summary"></div>
+                        </div>
                         
                         <!-- Google Maps will be embedded here -->
                         <div id="googleMap" style="width: 100%; height: 100%;"></div>
@@ -225,6 +250,17 @@ let map;
 let sites = [];
 let markers = [];
 let selectedSite = null;
+let routeStops = [];
+let routeLayer = null;
+
+function toggleRoutePlanner(forceOpen = null) {
+    const panel = document.getElementById('routePlannerPanel');
+    const toggle = document.getElementById('routePlannerToggle');
+    if (!panel || !toggle) return;
+    const shouldOpen = forceOpen === null ? panel.classList.contains('collapsed') : forceOpen;
+    panel.classList.toggle('collapsed', !shouldOpen);
+    toggle.classList.toggle('active', shouldOpen);
+}
 
 // Load sites data from hidden data attribute
 function loadSitesData() {
@@ -561,6 +597,248 @@ function navigateToSite() {
     }
 }
 
+function openInGoogleMapsForSite(site) {
+    const destination = site.latitude && site.longitude ? `${site.latitude},${site.longitude}` : site.address;
+    if (!destination) return;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`, '_blank');
+}
+
+function siteRouteLabel(site) {
+    return `${site.site_name || site.site_code || 'Site'} - ${site.address || `${site.latitude},${site.longitude}`}`;
+}
+
+function siteRouteValue(site) {
+    if (site.latitude && site.longitude) {
+        return `${site.latitude},${site.longitude}`;
+    }
+    return site.address || site.site_name || '';
+}
+
+function normalizeRouteText(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function findSiteByCodeOrName(value) {
+    const needle = normalizeRouteText(value);
+    if (!needle) return null;
+    return sites.find(site => {
+        const fields = [
+            site.site_code,
+            site.site_name,
+            site.address
+        ].map(normalizeRouteText);
+        return fields.some(field => field === needle);
+    }) || sites.find(site => {
+        const fields = [
+            site.site_code,
+            site.site_name
+        ].map(normalizeRouteText);
+        return fields.some(field => field && field.includes(needle));
+    });
+}
+
+function addSiteToRoute(site) {
+    const value = siteRouteValue(site);
+    if (!value) return;
+    if (!routeStops.some(stop => stop.value === value)) {
+        routeStops.push({ label: siteRouteLabel(site), value });
+        renderRouteStops();
+        toggleRoutePlanner(true);
+    }
+}
+
+function renderRouteStops() {
+    const list = document.getElementById('routeStopsList');
+    if (!list) return;
+    if (!routeStops.length) {
+        list.innerHTML = '<span class="route-empty">No map sites added yet</span>';
+        return;
+    }
+    list.innerHTML = routeStops.map((stop, index) => `
+        <div class="route-stop">
+            <span>${index + 1}. ${stop.label}</span>
+            <button type="button" onclick="removeRouteStop(${index})" aria-label="Remove stop">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function removeRouteStop(index) {
+    routeStops.splice(index, 1);
+    renderRouteStops();
+}
+
+function clearRouteStops() {
+    routeStops = [];
+    const textarea = document.getElementById('routeAddresses');
+    if (textarea) textarea.value = '';
+    if (routeLayer && map) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+    }
+    updateRouteSummary('');
+    renderRouteStops();
+}
+
+function getManualRouteEntries() {
+    const textarea = document.getElementById('routeAddresses');
+    if (!textarea) return [];
+    return textarea.value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+            const matchingSite = findSiteByCodeOrName(line);
+            if (matchingSite) {
+                return {
+                    label: siteRouteLabel(matchingSite),
+                    value: siteRouteValue(matchingSite),
+                    lat: parseFloat(matchingSite.latitude),
+                    lng: parseFloat(matchingSite.longitude)
+                };
+            }
+            return { label: line, value: line, lat: null, lng: null };
+        });
+}
+
+function getManualRouteStops() {
+    return getManualRouteEntries().map(entry => entry.value);
+}
+
+function getAllRouteEntries() {
+    return [
+        ...getManualRouteEntries(),
+        ...routeStops.map(stop => {
+            const matchingSite = sites.find(site => siteRouteValue(site) === stop.value);
+            return {
+                label: stop.label,
+                value: stop.value,
+                lat: matchingSite ? parseFloat(matchingSite.latitude) : null,
+                lng: matchingSite ? parseFloat(matchingSite.longitude) : null
+            };
+        })
+    ].filter(entry => entry.value);
+}
+
+function formatRouteDuration(seconds) {
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining ? `${hours} h ${remaining} min` : `${hours} h`;
+}
+
+function formatRouteDistance(meters) {
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+}
+
+function updateRouteSummary(message) {
+    const summary = document.getElementById('routeSummary');
+    if (summary) summary.innerHTML = message || '';
+}
+
+function haversineDistanceMeters(a, b) {
+    const radius = 6371000;
+    const toRad = degrees => degrees * Math.PI / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const value = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * radius * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+}
+
+function drawFallbackRoute(points) {
+    if (routeLayer && map) map.removeLayer(routeLayer);
+    routeLayer = L.polyline(points.map(point => [point.lat, point.lng]), {
+        color: '#1f4fd8',
+        weight: 5,
+        opacity: 0.9,
+        dashArray: '8, 8'
+    }).addTo(map);
+    map.fitBounds(routeLayer.getBounds().pad(0.2));
+    const distance = points.slice(1).reduce((total, point, index) => total + haversineDistanceMeters(points[index], point), 0);
+    const estimatedSeconds = distance / 75000 * 3600;
+    updateRouteSummary(`
+        <strong>${formatRouteDistance(distance)}</strong>
+        <span>${formatRouteDuration(estimatedSeconds)} estimated</span>
+        <small>Straight-line preview. Open Google Maps for exact navigation.</small>
+    `);
+}
+
+async function drawRouteOnMap() {
+    const entries = getAllRouteEntries();
+    const coordinateStops = entries.filter(entry => Number.isFinite(entry.lat) && Number.isFinite(entry.lng));
+    if (coordinateStops.length < 2) {
+        updateRouteSummary('<span class="text-danger">Add at least two site codes from the map data to draw route time.</span>');
+        return;
+    }
+
+    updateRouteSummary('<span>Calculating route...</span>');
+    const coordinates = coordinateStops.map(stop => `${stop.lng},${stop.lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Route service unavailable');
+        const data = await response.json();
+        const route = data.routes && data.routes[0];
+        if (!route || !route.geometry) throw new Error('No route found');
+
+        if (routeLayer && map) map.removeLayer(routeLayer);
+        routeLayer = L.geoJSON(route.geometry, {
+            style: {
+                color: '#1f4fd8',
+                weight: 6,
+                opacity: 0.88
+            }
+        }).addTo(map);
+        map.fitBounds(routeLayer.getBounds().pad(0.2));
+        updateRouteSummary(`
+            <strong>${formatRouteDistance(route.distance)}</strong>
+            <span>${formatRouteDuration(route.duration)}</span>
+            <small>${coordinateStops.length} stops routed on map</small>
+        `);
+    } catch (error) {
+        drawFallbackRoute(coordinateStops);
+    }
+}
+
+function openMultiStopDirections() {
+    const stops = [
+        ...getManualRouteStops(),
+        ...routeStops.map(stop => stop.value)
+    ].filter(Boolean);
+
+    if (stops.length === 0) {
+        alert('Add at least one address or site to create directions.');
+        return;
+    }
+
+    const encodedStops = stops.map(stop => encodeURIComponent(stop));
+    let url = 'https://www.google.com/maps/dir/?api=1&travelmode=driving';
+    if (encodedStops.length === 1) {
+        url += `&destination=${encodedStops[0]}`;
+    } else {
+        url += `&origin=${encodedStops[0]}`;
+        url += `&destination=${encodedStops[encodedStops.length - 1]}`;
+        if (encodedStops.length > 2) {
+            url += `&waypoints=${encodedStops.slice(1, -1).join('%7C')}`;
+        }
+    }
+    window.open(url, '_blank');
+}
+
+function useVisibleSitesForRoute() {
+    const bounds = map ? map.getBounds() : null;
+    const visibleSites = bounds
+        ? sites.filter(site => site.latitude && site.longitude && bounds.contains([parseFloat(site.latitude), parseFloat(site.longitude)]))
+        : sites;
+    visibleSites.slice(0, 10).forEach(addSiteToRoute);
+}
+
 function searchSites() {
     const searchTerm = document.getElementById('siteSearchInput').value.toLowerCase().trim();
     
@@ -685,6 +963,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('No sites to display');
         document.getElementById('siteCount').textContent = '0 Sites';
     }
+    renderRouteStops();
 });
 
 // Add sample site for testing (will be removed when CSV import is implemented)
@@ -726,6 +1005,9 @@ function updateSitesList() {
                 <button class="btn btn-sm btn-info-modern ms-1" onclick="openInGoogleMapsForSite(${JSON.stringify(site).replace(/"/g, '&quot;')})">
                     <i class="bi bi-map"></i> Maps
                 </button>
+                <button class="btn btn-sm btn-outline-modern ms-1" onclick="addSiteToRoute(${JSON.stringify(site).replace(/"/g, '&quot;')})">
+                    <i class="bi bi-plus-circle"></i> Route
+                </button>
             </td>
         `;
         tbody.appendChild(row);
@@ -746,6 +1028,7 @@ function addMarkerToMap(site) {
                 <p><strong>Code:</strong> ${site.site_code || 'N/A'}</p>
                 <p><strong>Address:</strong> ${site.address}</p>
                 <button class="btn btn-sm btn-primary-modern" onclick="showSiteDetails(${JSON.stringify(site).replace(/"/g, '&quot;')})">View Details</button>
+                <button class="btn btn-sm btn-outline-modern ms-1" onclick="addSiteToRoute(${JSON.stringify(site).replace(/"/g, '&quot;')})">Add to Route</button>
             </div>
         `);
     
@@ -753,6 +1036,13 @@ function addMarkerToMap(site) {
     window.markerClusterGroup.addLayer(marker);
     markers.push(marker);
 }
+
+window.addSiteToRoute = addSiteToRoute;
+window.removeRouteStop = removeRouteStop;
+window.clearRouteStops = clearRouteStops;
+window.openMultiStopDirections = openMultiStopDirections;
+window.useVisibleSitesForRoute = useVisibleSitesForRoute;
+window.drawRouteOnMap = drawRouteOnMap;
 </script>
 
 <!-- Leaflet CSS -->
@@ -804,6 +1094,240 @@ function addMarkerToMap(site) {
 #googleMap {
     width: 100%;
     height: 100%;
+}
+
+.route-planner-panel {
+    position: absolute;
+    top: 62px;
+    right: 12px;
+    z-index: 1000;
+    width: min(315px, calc(100% - 24px));
+    padding: 9px;
+    border: 1px solid rgba(203, 213, 225, .88);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 16px 34px -28px rgba(15, 23, 42, .72);
+    backdrop-filter: blur(10px);
+}
+
+.route-planner-panel.collapsed {
+    display: none;
+}
+
+.route-planner-toggle {
+    position: absolute;
+    top: 62px;
+    right: 12px;
+    z-index: 1001;
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid rgba(203, 213, 225, .88);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, .94);
+    color: var(--pro-text, #111827);
+    box-shadow: 0 16px 34px -28px rgba(15, 23, 42, .72);
+    font-size: 12px;
+    font-weight: 850;
+    backdrop-filter: blur(10px);
+}
+
+.route-planner-toggle.active {
+    background: var(--pro-primary, #1f4fd8);
+    border-color: var(--pro-primary, #1f4fd8);
+    color: #ffffff;
+}
+
+.route-planner-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.route-planner-title {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    color: var(--pro-text, #111827);
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.route-input {
+    min-height: 72px !important;
+    resize: vertical;
+}
+
+.route-stops-list {
+    display: grid;
+    gap: 5px;
+    max-height: 116px;
+    margin: 7px 0;
+    overflow-y: auto;
+}
+
+.route-stop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 7px;
+    border: 1px solid var(--pro-border, #dde3ea);
+    border-radius: 6px;
+    background: var(--pro-surface-soft, #f8fafc);
+    color: var(--pro-text, #111827);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.route-stop button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--pro-muted, #64748b);
+}
+
+.route-stop button:hover {
+    background: rgba(185, 28, 28, .1);
+    color: var(--pro-danger, #b91c1c);
+}
+
+.route-empty {
+    color: var(--pro-muted, #64748b);
+    font-size: 12px;
+}
+
+.route-planner-actions {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    align-items: center;
+    gap: 6px;
+}
+
+.route-action {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    gap: 5px;
+    min-height: 30px;
+    padding: 5px 7px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 850;
+    line-height: 1;
+}
+
+.route-action.primary {
+    background: var(--pro-primary, #1f4fd8);
+    border-color: var(--pro-primary, #1f4fd8);
+    color: #ffffff;
+}
+
+.route-action.success {
+    background: var(--pro-success, #047857);
+    border-color: var(--pro-success, #047857);
+    color: #ffffff;
+}
+
+.route-action.ghost {
+    background: #ffffff;
+    border-color: var(--pro-border, #dde3ea);
+    color: var(--pro-text, #111827);
+}
+
+.route-action:hover {
+    filter: brightness(.96);
+}
+
+.route-summary {
+    display: grid;
+    gap: 2px;
+    margin-top: 7px;
+    padding: 7px;
+    border: 1px solid rgba(31, 79, 216, .18);
+    border-radius: 7px;
+    background: #eef4ff;
+    color: var(--pro-text, #111827);
+    font-size: 11px;
+}
+
+.route-summary:empty {
+    display: none;
+}
+
+.route-summary strong {
+    color: var(--pro-primary, #1f4fd8);
+    font-size: 15px;
+}
+
+.route-summary span {
+    font-weight: 800;
+}
+
+.route-summary small {
+    color: var(--pro-muted, #64748b);
+}
+
+body.dark-mode .route-planner-panel {
+    background: rgba(16, 24, 39, .94);
+    border-color: var(--pro-border, #26364b);
+}
+
+body.dark-mode .route-planner-toggle {
+    background: rgba(16, 24, 39, .94);
+    border-color: var(--pro-border, #26364b);
+    color: var(--pro-text, #f8fafc);
+}
+
+body.dark-mode .route-planner-toggle.active {
+    background: var(--pro-primary, #60a5fa);
+    border-color: var(--pro-primary, #60a5fa);
+    color: #07111f;
+}
+
+body.dark-mode .route-action.ghost {
+    background: var(--pro-surface-soft, #152033);
+    border-color: var(--pro-border, #26364b);
+    color: var(--pro-text, #f8fafc);
+}
+
+body.dark-mode .route-stop {
+    background: var(--pro-surface-soft, #152033);
+    border-color: var(--pro-border, #26364b);
+}
+
+body.dark-mode .route-summary {
+    background: #1d2d44;
+    border-color: #38516d;
+}
+
+@media (max-width: 576px) {
+    .route-planner-panel {
+        left: 10px;
+        right: 10px;
+        top: 64px;
+        width: auto;
+    }
+
+    .route-planner-toggle {
+        right: 10px;
+        top: 64px;
+    }
+
+    .route-planner-actions {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Fullscreen button positioning in fullscreen mode */

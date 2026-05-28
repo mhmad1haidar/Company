@@ -1,0 +1,194 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}Monthly Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Monthly Report</h2>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="btn-group w-100" role="group">
+                        <a href="{% url 'attendance:attendance_dashboard' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                        <a href="{% url 'attendance:attendance_table' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-table"></i> Attendance Table
+                        </a>
+                        <a href="{% url 'attendance:calendar' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-calendar"></i> Calendar View
+                        </a>
+                        <a href="{% url 'attendance:monthly_report' %}" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-bar-graph"></i> Monthly Report
+                        </a>
+                        {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'manager' %}
+                        <a href="{% url 'attendance:manual_entry' %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Manual Entry
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Month</label>
+                            <input type="month" name="month" class="form-control" value="{{ year }}-{{ month|stringformat:'02d' }}">
+                        </div>
+                        {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'manager' %}
+                        <div class="col-md-4">
+                            <label class="form-label">Employee</label>
+                            <select name="user" class="form-select">
+                                <option value="">All Employees</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}" {% if selected_user.id == user.id %}selected{% endif %}>
+                                        {{ user.get_full_name|default:user.username }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Summary - {{ selected_user.get_full_name|default:selected_user.username }} ({{ month|date:"F" }} {{ year }})</h4>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Hours</h6>
+                    <h3>{{ total_hours|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Overtime</h6>
+                    <h3>{{ total_overtime|floatformat:1 }}h</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Present</h6>
+                    <h3>{{ present_days }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Absent</h6>
+                    <h3>{{ absent_days }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Late</h6>
+                    <h3>{{ late_days }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Report -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Detailed Attendance</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Day</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Break (h)</th>
+                                    <th>Work Hours</th>
+                                    <th>Overtime</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in attendance_records %}
+                                <tr>
+                                    <td>{{ record.date|date:"Y-m-d" }}</td>
+                                    <td>{{ record.date|date:"l" }}</td>
+                                    <td>{{ record.check_in|date:"H:i"|default:"-" }}</td>
+                                    <td>{{ record.check_out|date:"H:i"|default:"-" }}</td>
+                                    <td>{{ record.break_duration }}</td>
+                                    <td>{{ record.total_hours|default:"0" }}h</td>
+                                    <td>{{ record.overtime_hours|default:"0" }}h</td>
+                                    <td>
+                                        <span class="badge bg-{{ record.status_color }}">{{ record.get_status_display }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No attendance records found for this period.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-dark">
+                                    <td colspan="5" class="text-end fw-bold">Totals:</td>
+                                    <td class="fw-bold">{{ total_hours|floatformat:1 }}h</td>
+                                    <td class="fw-bold">{{ total_overtime|floatformat:1 }}h</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Buttons -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="d-flex gap-2">
+                <a href="{% url 'attendance:attendance_timesheet' %}?month={{ month }}&year={{ year }}&user={{ selected_user.id }}&format=csv" class="btn btn-success">
+                    <i class="bi bi-file-earmark-csv"></i> Export CSV
+                </a>
+                <a href="{% url 'attendance:attendance_timesheet' %}?month={{ month }}&year={{ year }}&user={{ selected_user.id }}&format=excel" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-excel"></i> Export Excel
+                </a>
+                <a href="{% url 'attendance:attendance_table' %}" class="btn btn-secondary">
+                    <i class="bi bi-table"></i> Back to Table
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

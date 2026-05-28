@@ -1,0 +1,132 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Audit Logs - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    {% include "warehouse/includes/warehouse_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Audit Logs</h1>
+            <p>Track all changes and actions in the warehouse</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'warehouse:dashboard' %}" class="btn btn-outline-modern"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card-modern mb-4">
+        <div class="card-body-modern">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">User</label>
+                    <select name="user" class="form-select form-select-sm">
+                        <option value="">All Users</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if request.GET.user|add:"0" == user.id %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Action</label>
+                    <select name="action" class="form-select form-select-sm">
+                        <option value="">All Actions</option>
+                        {% for action in action_choices %}
+                        <option value="{{ action }}" {% if request.GET.action == action %}selected{% endif %}>{{ action|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Date From</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Date To</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search me-1"></i> Filter</button>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small text-muted">&nbsp;</label>
+                    <a href="{% url 'warehouse:audit_log_list' %}" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-x-circle me-1"></i> Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Audit Logs Table -->
+    <div class="card-modern mb-4">
+        <div class="card-body-modern">
+            {% if audit_logs %}
+            <div class="table-responsive">
+                <table class="table table-modern table-sm">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Item</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td>{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+                            <td>{{ log.user.get_full_name|default:log.user.username }}</td>
+                            <td>
+                                <span class="badge bg-{% if log.action == 'create' %}success{% elif log.action == 'update' %}info{% elif log.action == 'delete' %}danger{% elif log.action == 'movement_in' %}primary{% elif log.action == 'movement_out' %}warning{% else %}secondary{% endif %}">
+                                    {{ log.action|title }}
+                                </span>
+                            </td>
+                            <td>{{ log.item.code }} - {{ log.item.name }}</td>
+                            <td>{{ log.details }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="empty-state text-center py-5">
+                <i class="bi bi-journal-x display-1 text-muted"></i>
+                <h5 class="mt-3">No Audit Logs Found</h5>
+                <p class="text-muted">No audit logs match your filters.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

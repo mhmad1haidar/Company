@@ -5,6 +5,7 @@ from django.urls import include, path
 from django.views.generic import RedirectView
 
 from . import hr_admin  # noqa: F401 — register admin site branding
+from . import views
 from ajax_test_view import ajax_test
 
 
@@ -20,6 +21,7 @@ urlpatterns = [
     path("warehouse/", include("warehouse.urls")),
     path("api/v1/", include("company.api_urls")),
     path("ajax-test/", ajax_test, name="ajax_test"),
+    path("media/google-drive/<path:file_path>/", views.serve_google_drive_file, name="serve_google_drive_file"),
 ]
 
 # Serve static and media files in development

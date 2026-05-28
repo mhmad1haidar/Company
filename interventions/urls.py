@@ -1,7 +1,7 @@
 from django.shortcuts import redirect
 from django.urls import path, include
 from .views import *
-from .map_views import sites_map, import_sites_csv, clear_sites_cache
+from .map_views import sites_map, import_sites_csv, import_sites_json, clear_sites_cache
 from .intervention_views import (
     InterventionListView, InterventionDetailView, InterventionCreateView,
     InterventionUpdateView, InterventionDeleteView, InterventionImportView, 
@@ -21,6 +21,7 @@ urlpatterns = [
     path('<uuid:pk>/', InterventionDetailView.as_view(), name='intervention-detail'),
     path('<uuid:pk>/edit/', InterventionUpdateView.as_view(), name='intervention-update'),
     path('<uuid:pk>/delete/', InterventionDeleteView.as_view(), name='intervention-delete'),
+    path('intervention/<uuid:pk>/get-directions/', get_directions, name='intervention-get-directions'),
     path('bulk-delete/', bulk_delete_interventions, name='intervention-bulk-delete'),
     path('import/', InterventionImportView.as_view(), name='intervention-import'),
     path('export/csv/', export_interventions_csv, name='intervention-export-csv'),
@@ -36,7 +37,8 @@ urlpatterns = [
     # Map views
     path('sites-map/', sites_map, name='sites_map'),
     
-    # CSV import endpoint
+    # Import endpoints
+    path('import-sites-json/', import_sites_json, name='import_sites_json'),
     path('import-sites-csv/', import_sites_csv, name='import_sites_csv'),
     
     # Clear cache endpoint

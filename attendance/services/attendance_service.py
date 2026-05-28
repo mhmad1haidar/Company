@@ -39,6 +39,7 @@ def calculate_hours(attendance: Attendance) -> Decimal | None:
     """
     Derive working hours from check_in / check_out (does not persist).
 
+    Calculates total hours, subtracts break duration, and computes overtime.
     Returns None if times are missing or invalid.
     """
     if (
@@ -47,9 +48,27 @@ def calculate_hours(attendance: Attendance) -> Decimal | None:
         or attendance.check_out < attendance.check_in
     ):
         return None
+    
     delta = attendance.check_out - attendance.check_in
-    hours = delta.total_seconds() / 3600
-    return Decimal(str(round(hours, 2)))
+    total_hours = Decimal(str(round(delta.total_seconds() / 3600, 2)))
+    
+    # Subtract break duration
+    break_hours = attendance.break_duration or Decimal('1.00')
+    work_hours = total_hours - break_hours
+    
+    # Ensure work hours don't go negative
+    if work_hours < 0:
+        work_hours = Decimal('0')
+    
+    # Calculate overtime
+    standard_hours = attendance.standard_hours or Decimal('8.00')
+    overtime = work_hours - standard_hours if work_hours > standard_hours else Decimal('0')
+    
+    # Store calculated values
+    attendance.total_hours = work_hours
+    attendance.overtime_hours = overtime
+    
+    return work_hours
 
 
 def _get_or_create_attendance_for_day(

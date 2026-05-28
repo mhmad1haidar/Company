@@ -112,6 +112,10 @@ def user_is_assigned_to_intervention(user, intervention) -> bool:
 
 def get_accessible_modules(user):
     """Get list of modules user can access"""
+    if hasattr(user, "has_module_access"):
+        choices = getattr(user, "MODULE_ACCESS_CHOICES", [])
+        return [key for key, _label in choices if user.has_module_access(key)]
+
     role = get_user_role(user)
     
     modules = {
@@ -123,6 +127,13 @@ def get_accessible_modules(user):
     }
     
     return modules.get(role, [])
+
+
+def has_module_access(user, module):
+    """Check if a user can access a main application module."""
+    if hasattr(user, "has_module_access"):
+        return user.has_module_access(module)
+    return module in get_accessible_modules(user)
 
 
 def can_view_all_attendance(user):

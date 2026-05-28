@@ -1,0 +1,74 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Edit Supplier - {{ item.code }}{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="card-modern mb-4">
+        <div class="card-body-modern py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">Edit Supplier for {{ item.code }} - {{ item.name }}</h4>
+                    <p class="text-muted mb-0 small">{{ supplier_detail.supplier.name }}</p>
+                </div>
+                <a href="{% url 'warehouse:item_detail' item.pk %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Back to Item
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-body-modern">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Supplier</label>
+                        <select name="supplier" class="form-control" required>
+                            <option value="">Select supplier...</option>
+                            {% for supplier in suppliers %}
+                            <option value="{{ supplier.pk }}" {% if supplier.pk == supplier_detail.supplier.pk %}selected{% endif %}>{{ supplier.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Supplier Code</label>
+                        <input type="text" name="supplier_code" class="form-control" value="{{ supplier_detail.supplier_code }}" placeholder="Supplier's SKU">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Supplier's description of the item">{{ supplier_detail.description }}</textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Unit Price</label>
+                        <input type="number" name="unit_price" class="form-control" step="0.01" value="{{ supplier_detail.unit_price }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Lead Time (days)</label>
+                        <input type="number" name="lead_time_days" class="form-control" value="{{ supplier_detail.lead_time_days }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Min Order Qty</label>
+                        <input type="number" name="min_order_quantity" class="form-control" value="{{ supplier_detail.min_order_quantity }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check mt-4">
+                            <input type="checkbox" name="is_preferred" class="form-check-input" id="isPreferred" {% if supplier_detail.is_preferred %}checked{% endif %}>
+                            <label class="form-check-label" for="isPreferred">Preferred Supplier</label>
+                        </div>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ supplier_detail.notes }}</textarea>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-2"></i> Save Changes</button>
+                    <a href="{% url 'warehouse:item_detail' item.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

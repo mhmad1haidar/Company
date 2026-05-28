@@ -1,3 +1,4 @@
+{% load access_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,6 +49,7 @@
         
         * {
             box-sizing: border-box;
+            letter-spacing: 0;
         }
         
         body {
@@ -847,9 +849,211 @@
         .slide-in {
             animation: slideIn 0.3s ease;
         }
+
+        /* Professional refresh shared by legacy base pages */
+        :root {
+            --surface-raised: rgba(255, 255, 255, 0.92);
+            --surface-muted: rgba(248, 250, 252, 0.86);
+            --border-color: var(--gray-200);
+            --border-hover: var(--gray-300);
+            --focus-ring: 0 0 0 4px rgba(99, 102, 241, 0.16);
+        }
+
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 34rem),
+                linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        }
+
+        .navbar-modern {
+            height: 60px;
+            background: rgba(255, 255, 255, 0.86);
+            border-bottom-color: var(--border-color);
+            box-shadow: var(--shadow-sm);
+            backdrop-filter: saturate(180%) blur(18px);
+        }
+
+        .navbar-container {
+            gap: 24px;
+        }
+
+        .nav-link {
+            border-radius: 999px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
+            color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 10px 22px -16px rgba(99, 102, 241, 0.85);
+        }
+
+        .main-content {
+            padding: clamp(16px, 2vw, 32px);
+            min-height: calc(100vh - 60px);
+        }
+
+        .main-content > .container-fluid {
+            max-width: 1540px;
+            padding-inline: clamp(4px, 1.2vw, 18px);
+        }
+
+        .page-header {
+            gap: 16px;
+            padding: 20px 0 18px;
+            flex-wrap: wrap;
+        }
+
+        .card,
+        .card-modern,
+        .stat-card {
+            background: var(--surface-raised);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 14px 38px -30px rgb(15 23 42 / 0.55);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .card:hover,
+        .card-modern:hover,
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-1px);
+        }
+
+        .card-header,
+        .card-header-modern {
+            background: var(--surface-muted);
+            border-bottom-color: var(--border-color);
+        }
+
+        .btn,
+        .btn-modern {
+            border-radius: 8px;
+            min-height: 38px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover,
+        .btn-modern:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .form-control,
+        .form-select,
+        .form-control-modern {
+            background: var(--surface-raised);
+            border-color: var(--border-color);
+            border-radius: 8px;
+            color: var(--gray-900);
+        }
+
+        .form-control:focus,
+        .form-select:focus,
+        .form-control-modern:focus {
+            border-color: var(--primary);
+            box-shadow: var(--focus-ring);
+        }
+
+        .table,
+        .table-modern {
+            background: var(--surface-raised);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table th,
+        .table-modern th {
+            background: var(--surface-muted);
+            color: var(--gray-700);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table td,
+        .table-modern td {
+            vertical-align: middle;
+        }
+
+        .login-container {
+            background:
+                radial-gradient(circle at 18% 16%, rgba(20, 184, 166, 0.34), transparent 28rem),
+                radial-gradient(circle at 80% 12%, rgba(99, 102, 241, 0.38), transparent 30rem),
+                linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(255, 255, 255, 0.54);
+            border-radius: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-modern {
+                height: auto;
+                min-height: 60px;
+                padding: 0;
+            }
+
+            .navbar-container {
+                min-height: 60px;
+                padding: 0 16px;
+            }
+
+            .main-content {
+                padding: 14px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .page-actions {
+                flex-wrap: wrap;
+            }
+
+            .page-actions .btn {
+                flex: 1;
+                min-width: 140px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card-body,
+            .card-body-modern {
+                padding: 16px;
+            }
+
+            .table-responsive,
+            .table-modern {
+                overflow-x: auto;
+            }
+
+            .user-profile-dropdown .user-info,
+            .user-profile-dropdown .bi-chevron-down {
+                display: none;
+            }
+        }
+
+        {% include "includes/flexible_ui.css" %}
+
+        * {
+            letter-spacing: 0 !important;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+    <style>
+        {% include "includes/flexible_ui.css" %}
     </style>
 </head>
-<body>
+<body class="{% if request.user.dark_mode %}dark-mode{% endif %}" data-dark-mode="{% if request.user.dark_mode %}true{% else %}false{% endif %}">
     {% if user.is_authenticated %}
     <!-- Modern Navbar -->
     <nav class="navbar-modern">
@@ -868,7 +1072,7 @@
                         Dashboard
                     </a>
                 </li>
-                {% if request.user.is_superuser or request.user.is_staff %}
+                {% if request.user|has_module_access:"employees" %}
                 <li>
                     <a href="{% url 'accounts:employee-list' %}" class="nav-link {% if 'employee' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-people"></i>
@@ -876,7 +1080,7 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if perms.attendance.view_attendance %}
+                {% if request.user|has_module_access:"attendance" %}
                 <li>
                     <a href="{% url 'attendance:attendance_dashboard' %}" class="nav-link {% if 'attendance' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-clock-history"></i>
@@ -884,7 +1088,7 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if perms.warehouse.view_item %}
+                {% if request.user|has_module_access:"warehouse" %}
                 <li>
                     <a href="{% url 'warehouse:item_list' %}" class="nav-link {% if 'warehouse' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-box-seam"></i>
@@ -892,7 +1096,7 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if perms.interventions.view_intervention %}
+                {% if request.user|has_module_access:"interventions" %}
                 <li>
                     <a href="{% url 'interventions:intervention_list' %}" class="nav-link {% if 'interventions' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-tools"></i>
@@ -900,7 +1104,7 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if perms.assignments.view_assignment %}
+                {% if request.user|has_module_access:"assignments" %}
                 <li>
                     <a href="{% url 'assignments:assignment-list' %}" class="nav-link {% if 'assignments' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-clipboard-check"></i>
@@ -908,7 +1112,7 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if perms.fleet.view_vehicle %}
+                {% if request.user|has_module_access:"fleet" %}
                 <li>
                     <a href="{% url 'fleet:car_list' %}" class="nav-link {% if 'fleet' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-truck"></i>
@@ -916,13 +1120,15 @@
                     </a>
                 </li>
                 {% endif %}
+                {% if request.user|has_module_access:"leave" %}
                 <li>
                     <a href="{% url 'leave:leave_list' %}" class="nav-link {% if 'leave' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="bi bi-calendar3"></i>
                         Leave
                     </a>
                 </li>
-                {% if user.is_authenticated %}
+                {% endif %}
+                {% if request.user|has_module_access:"sites_map" %}
                 <li>
                     <a href="{% url 'interventions:sites_map' %}" class="nav-link {% if 'interventions' in request.resolver_match.app_name and 'sites_map' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-map"></i>
@@ -945,6 +1151,11 @@
                 <!-- Mobile Menu Toggle -->
                 <button class="btn btn-outline-modern mobile-menu-toggle" id="mobileMenuToggle">
                     <i class="bi bi-list"></i>
+                </button>
+
+                <!-- Dark Mode Toggle -->
+                <button class="btn btn-outline-modern theme-toggle" type="button" id="darkModeToggle" title="Toggle Dark Mode">
+                    <i class="bi bi-moon" id="darkModeIcon"></i>
                 </button>
                 
                 <!-- User Profile Dropdown -->
@@ -1084,8 +1295,35 @@
                     }
                 });
             }
+
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const darkModeIcon = document.getElementById('darkModeIcon');
+
+            if (darkModeIcon && document.body.dataset.darkMode === 'true') {
+                darkModeIcon.classList.remove('bi-moon');
+                darkModeIcon.classList.add('bi-sun');
+            }
+
+            if (darkModeToggle && darkModeIcon) {
+                darkModeToggle.addEventListener('click', function() {
+                    const isDarkMode = document.body.classList.toggle('dark-mode');
+                    document.body.dataset.darkMode = isDarkMode ? 'true' : 'false';
+                    darkModeIcon.classList.toggle('bi-moon');
+                    darkModeIcon.classList.toggle('bi-sun');
+
+                    fetch('/accounts/toggle-dark-mode/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                        },
+                        body: JSON.stringify({ dark_mode: isDarkMode })
+                    }).catch(error => console.error('Error saving dark mode preference:', error));
+                });
+            }
         });
     </script>
     {% endif %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

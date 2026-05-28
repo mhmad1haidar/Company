@@ -1,0 +1,68 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Stocktaking - Warehouse{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="card-modern mb-4">
+        <div class="card-body-modern py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h4 class="mb-1">Stocktaking</h4>
+                    <p class="text-muted mb-0 small">Inventory count audits</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'warehouse:dashboard' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="{% url 'warehouse:item_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-box-seam"></i> Items
+                    </a>
+                    <a href="{% url 'warehouse:stocktaking_create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> New Stocktaking
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-body-modern">
+            {% if stocktakings %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Conducted By</th>
+                            <th>Conducted At</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stocktaking in stocktakings %}
+                        <tr>
+                            <td><strong>{{ stocktaking.name }}</strong></td>
+                            <td><span class="badge bg-{{ stocktaking.status }}">{{ stocktaking.get_status_display }}</span></td>
+                            <td>{{ stocktaking.conducted_by.username|default:"-" }}</td>
+                            <td>{{ stocktaking.conducted_at|default:"-"|date:"Y-m-d" }}</td>
+                            <td>{{ stocktaking.created_at|date:"Y-m-d" }}</td>
+                            <td>
+                                <a href="{% url 'warehouse:stocktaking_detail' stocktaking.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No stocktaking records found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

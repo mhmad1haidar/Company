@@ -5,10 +5,11 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import models
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect
 from django.views import View
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, ListView
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 import csv
@@ -18,6 +19,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from attendance.exceptions import AttendanceServiceError
+from attendance.models import Attendance
 import attendance.leave_integration as attendance_services_module
 
 check_in = attendance_services_module.check_in
@@ -445,10 +447,58 @@ class AttendanceDashboardView(LoginRequiredMixin, TemplateView):
         context["late_count"] = today_attendance_qs.filter(status='late').count()
         context["total_employees"] = get_user_model().objects.filter(is_active=True).count()
         
+        # Add work hour statistics for current user
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        
+        user_week_attendance = Attendance.objects.filter(
+            user=self.request.user,
+            date__gte=week_start,
+            date__lte=week_end
+        )
+        
+        context["week_total_hours"] = user_week_attendance.aggregate(
+            total_hours=models.Sum('total_hours')
+        )['total_hours'] or 0
+        context["week_overtime_hours"] = user_week_attendance.aggregate(
+            total_overtime=models.Sum('overtime_hours')
+        )['total_overtime'] or 0
+        context["week_work_days"] = user_week_attendance.filter(
+            check_in__isnull=False
+        ).count()
+        
+        # Month statistics
+        month_start = today.replace(day=1)
+        user_month_attendance = Attendance.objects.filter(
+            user=self.request.user,
+            date__gte=month_start,
+            date__lte=today
+        )
+        
+        context["month_total_hours"] = user_month_attendance.aggregate(
+            total_hours=models.Sum('total_hours')
+        )['total_hours'] or 0
+        context["month_overtime_hours"] = user_month_attendance.aggregate(
+            total_overtime=models.Sum('overtime_hours')
+        )['total_overtime'] or 0
+        context["month_work_days"] = user_month_attendance.filter(
+            check_in__isnull=False
+        ).count()
+        
         # Add recent attendance for current user
         context["recent_attendance"] = Attendance.objects.filter(
             user=self.request.user
         ).order_by('-date', '-check_in')[:10]
+        
+        # Pending approvals for managers/admins
+        if self.request.user.is_staff or getattr(self.request.user, 'role', None) in ['admin', 'manager']:
+            context["pending_approvals"] = Attendance.objects.filter(
+                is_approved=False
+            ).order_by('-date')[:10]
+            context["has_pending_approvals"] = True
+        else:
+            context["pending_approvals"] = []
+            context["has_pending_approvals"] = False
         
         return context
 
@@ -512,3 +562,276 @@ class CalendarDataView(LoginRequiredMixin, View):
         except Exception as e:
             logger.exception(f"Error getting calendar data: {e}")
             return JsonResponse({'error': 'Failed to get calendar data'}, status=500)
+
+
+class AttendanceTableView(LoginRequiredMixin, ListView):
+    """Attendance table view with filters."""
+    
+    model = Attendance
+    template_name = "attendance/attendance_table.html"
+    context_object_name = "attendance_records"
+    paginate_by = 30
+    
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related('user')
+        
+        # Filter by user (if not admin/manager, only show own attendance)
+        user_id = self.request.GET.get('user')
+        if not (self.request.user.is_staff or getattr(self.request.user, 'role', None) in ['admin', 'manager']):
+            queryset = queryset.filter(user=self.request.user)
+        elif user_id and user_id != 'all':
+            queryset = queryset.filter(user_id=int(user_id))
+        
+        # Filter by date range
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
+        if start_date:
+            queryset = queryset.filter(date__gte=datetime.strptime(start_date, '%Y-%m-%d').date())
+        if end_date:
+            queryset = queryset.filter(date__lte=datetime.strptime(end_date, '%Y-%m-%d').date())
+        
+        # Filter by status
+        status = self.request.GET.get('status')
+        if status and status != 'all':
+            queryset = queryset.filter(status=status)
+        
+        # Filter by approval status
+        approved = self.request.GET.get('approved')
+        if approved == 'pending':
+            queryset = queryset.filter(is_approved=False)
+        elif approved == 'approved':
+            queryset = queryset.filter(is_approved=True)
+        
+        return queryset.order_by('-date', '-check_in')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['users'] = get_user_model().objects.filter(is_active=True).order_by('username')
+        context['status_choices'] = Attendance.Status.choices
+        return context
+
+
+class AttendanceCalendarView(LoginRequiredMixin, TemplateView):
+    """Calendar view for attendance."""
+    
+    template_name = "attendance/calendar.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        from .models import Attendance
+        from calendar import monthcalendar, month_name
+        
+        # Handle month parameter - can be just month number or year-month format
+        month_param = self.request.GET.get('month', '')
+        if '-' in month_param:
+            # Format: YYYY-MM
+            year, month = map(int, month_param.split('-'))
+        else:
+            month = int(month_param) if month_param else today.month
+            year = int(self.request.GET.get('year', today.year))
+        
+        context['month'] = month
+        context['year'] = year
+        context['month_name'] = month_name[month]
+        context['today'] = today
+        
+        # Calculate previous/next month
+        if month == 1:
+            context['previous_month'] = 12
+            context['previous_year'] = year - 1
+        else:
+            context['previous_month'] = month - 1
+            context['previous_year'] = year
+        
+        if month == 12:
+            context['next_month'] = 1
+            context['next_year'] = year + 1
+        else:
+            context['next_month'] = month + 1
+            context['next_year'] = year
+        
+        # Get employees visible on the calendar.
+        selected_user_id = self.request.GET.get('user')
+        can_view_all = self.request.user.is_staff or getattr(self.request.user, 'role', None) in ['admin', 'manager']
+        all_users = get_user_model().objects.filter(is_active=True).order_by('username')
+        if can_view_all:
+            all_employees = all_users
+            if selected_user_id:
+                all_employees = all_employees.filter(id=selected_user_id)
+        else:
+            all_employees = all_users.filter(id=self.request.user.id)
+            selected_user_id = str(self.request.user.id)
+
+        context['employees'] = all_employees
+        context['users'] = all_users if can_view_all else all_employees
+        context['selected_user_id'] = int(selected_user_id) if selected_user_id else None
+        
+        # Get all attendance records for the month
+        attendance_records = Attendance.objects.filter(
+            date__year=year,
+            date__month=month,
+            user__in=all_employees,
+        ).select_related('user')
+        
+        # Build a nested dictionary: attendance_dict[user_id][date] = attendance
+        attendance_dict = {}
+        for employee in all_employees:
+            attendance_dict[employee.id] = {}
+        
+        for record in attendance_records:
+            if record.user_id not in attendance_dict:
+                attendance_dict[record.user_id] = {}
+            attendance_dict[record.user_id][record.date] = record
+        
+        context['attendance_dict'] = attendance_dict
+        
+        # Build calendar data with all days
+        calendar_days = []
+        for week in monthcalendar(year, month):
+            week_days = []
+            for day in week:
+                if day == 0:
+                    week_days.append({'day': '', 'is_weekend': False})
+                else:
+                    date_obj = datetime(year, month, day).date()
+                    is_weekend = date_obj.weekday() >= 5
+                    is_future = date_obj > today
+                    week_days.append({
+                        'day': day,
+                        'date': date_obj,
+                        'is_weekend': is_weekend,
+                        'is_future': is_future,
+                        'is_absence_expected': not is_weekend and not is_future,
+                    })
+            calendar_days.append(week_days)
+        
+        context['calendar_days'] = calendar_days
+        
+        return context
+
+
+class ManualAttendanceEntryView(LoginRequiredMixin, TemplateView):
+    """Manual attendance entry form."""
+    
+    template_name = "attendance/manual_entry.html"
+    
+    def post(self, request, *args, **kwargs):
+        from .models import Attendance
+        from .forms import ManualAttendanceForm
+        
+        form = ManualAttendanceForm(request.POST)
+        if form.is_valid():
+            attendance = form.save(commit=False)
+            attendance.is_approved = False  # Requires approval
+            attendance.save()
+            
+            # Recalculate hours
+            attendance._recompute_total_hours()
+            attendance.save()
+            
+            messages.success(request, "Attendance record created and pending approval.")
+            return redirect("attendance:attendance_table")
+        else:
+            context = self.get_context_data()
+            context['form'] = form
+            return self.render_to_response(context)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .forms import ManualAttendanceForm
+        context['form'] = ManualAttendanceForm()
+        context['users'] = get_user_model().objects.filter(is_active=True).order_by('username')
+        return context
+
+
+class ApproveAttendanceView(LoginRequiredMixin, View):
+    """Approve or reject manual attendance entries."""
+    
+    def post(self, request, *args, **kwargs):
+        from .models import Attendance
+        
+        attendance_id = request.POST.get('attendance_id')
+        action = request.POST.get('action')  # 'approve' or 'reject'
+        
+        try:
+            attendance = Attendance.objects.get(id=attendance_id)
+            
+            if action == 'approve':
+                attendance.is_approved = True
+                attendance.approved_by = request.user
+                attendance.approved_at = timezone.now()
+                attendance.save()
+                messages.success(request, "Attendance record approved.")
+            elif action == 'reject':
+                attendance.delete()
+                messages.success(request, "Attendance record rejected and deleted.")
+            
+        except Attendance.DoesNotExist:
+            messages.error(request, "Attendance record not found.")
+        
+        return redirect("attendance:attendance_table")
+
+
+class MonthlyReportView(LoginRequiredMixin, TemplateView):
+    """Monthly report view with overtime details."""
+    
+    template_name = "attendance/monthly_report.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        
+        # Handle month parameter - can be just month number or year-month format
+        month_param = self.request.GET.get('month', '')
+        if '-' in month_param:
+            # Format: YYYY-MM
+            year, month = map(int, month_param.split('-'))
+        else:
+            month = int(month_param) if month_param else today.month
+            year = int(self.request.GET.get('year', today.year))
+        
+        context['month'] = month
+        context['year'] = year
+        
+        # Get user filter
+        user_id = self.request.GET.get('user')
+        if user_id and (self.request.user.is_staff or getattr(self.request.user, 'role', None) in ['admin', 'manager']):
+            from .models import Attendance
+            user = get_user_model().objects.get(id=int(user_id))
+            attendance_records = Attendance.objects.filter(
+                user=user,
+                date__year=year,
+                date__month=month
+            ).order_by('date')
+            context['selected_user'] = user
+        else:
+            from .models import Attendance
+            attendance_records = Attendance.objects.filter(
+                user=self.request.user,
+                date__year=year,
+                date__month=month
+            ).order_by('date')
+            context['selected_user'] = self.request.user
+        
+        # Calculate statistics
+        total_hours = attendance_records.aggregate(
+            total=models.Sum('total_hours')
+        )['total'] or 0
+        total_overtime = attendance_records.aggregate(
+            overtime=models.Sum('overtime_hours')
+        )['overtime'] or 0
+        present_days = attendance_records.filter(check_in__isnull=False).count()
+        absent_days = attendance_records.filter(status='absent').count()
+        late_days = attendance_records.filter(status='late').count()
+        
+        context['attendance_records'] = attendance_records
+        context['total_hours'] = total_hours
+        context['total_overtime'] = total_overtime
+        context['present_days'] = present_days
+        context['absent_days'] = absent_days
+        context['late_days'] = late_days
+        
+        context['users'] = get_user_model().objects.filter(is_active=True).order_by('username')
+        
+        return context

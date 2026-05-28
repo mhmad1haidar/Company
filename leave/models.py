@@ -3,19 +3,21 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from company.google_drive_storage import GoogleDriveStorage
 
 
 def leave_attachment_path(instance, filename):
-    """Generate upload path for leave attachments: leave_attachments/user_id_username/YYYY/MM/filename"""
+    """Generate upload path for leave attachments: leave_attachments/user_id_username/leave_type/YYYY/filename"""
     user_id = instance.user.id
     username = instance.user.username
     year = timezone.now().year
-    month = timezone.now().month
+    # Get leave type code
+    leave_type_code = instance.leave_type.code if instance.leave_type else 'other'
     # Get file extension
     ext = os.path.splitext(filename)[1]
     # Create safe filename
     safe_filename = f"leave_{instance.id if instance.id else 'new'}{ext}"
-    return f'leave_attachments/{user_id}_{username}/{year:04d}/{month:02d}/{safe_filename}'
+    return f'leave_attachments/{user_id}_{username}/{leave_type_code}/{year:04d}/{safe_filename}'
 
 
 class LeaveType(models.Model):
@@ -66,6 +68,7 @@ class Leave(models.Model):
     )
     reason = models.TextField(blank=True)
     attachment = models.FileField(
+        storage=GoogleDriveStorage(),
         upload_to=leave_attachment_path,
         blank=True,
         null=True,

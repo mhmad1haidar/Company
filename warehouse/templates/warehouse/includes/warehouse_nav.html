@@ -1,0 +1,42 @@
+<div class="warehouse-nav mb-3">
+    <a href="{% url 'warehouse:dashboard' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+    <a href="{% url 'warehouse:item_list' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'item_list' or request.resolver_match.url_name == 'item_detail' or request.resolver_match.url_name == 'item_update' or request.resolver_match.url_name == 'item_create' %}active{% endif %}">
+        <i class="bi bi-box-seam"></i> Items
+    </a>
+    <a href="{% url 'warehouse:item_create' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'item_create' %}active{% endif %}">
+        <i class="bi bi-plus-circle"></i> Add Item
+    </a>
+    <a href="{% url 'warehouse:movement_list' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'movement_list' %}active{% endif %}">
+        <i class="bi bi-arrow-left-right"></i> Movements
+    </a>
+    <a href="{% url 'warehouse:movement_create' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'movement_create' %}active{% endif %}">
+        <i class="bi bi-plus-square"></i> Record Stock
+    </a>
+    <a href="{% url 'warehouse:request_list' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}">
+        <i class="bi bi-clipboard-check"></i> Requests
+    </a>
+    <a href="{% url 'warehouse:request_create' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'request_create' %}active{% endif %}">
+        <i class="bi bi-send-check"></i> New Request
+    </a>
+    <a href="{% url 'warehouse:inventory_report' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'inventory_report' %}active{% endif %}">
+        <i class="bi bi-file-earmark-bar-graph"></i> Report
+    </a>
+    <div class="dropdown">
+        <button type="button" class="warehouse-nav-link warehouse-nav-button dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'warehouse:export_inventory_excel' %}"><i class="bi bi-file-earmark-excel me-2"></i> Excel</a></li>
+            <li><a class="dropdown-item" href="{% url 'warehouse:export_inventory_csv' %}"><i class="bi bi-filetype-csv me-2"></i> CSV</a></li>
+            <li><a class="dropdown-item" href="{% url 'warehouse:export_inventory_pdf' %}"><i class="bi bi-file-earmark-pdf me-2"></i> PDF</a></li>
+        </ul>
+    </div>
+    <a href="{% url 'warehouse:assignments_list' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'assignments_list' %}active{% endif %}">
+        <i class="bi bi-people"></i> Assign Materials
+    </a>
+    <a href="{% url 'warehouse:audit_log_list' %}" class="warehouse-nav-link {% if request.resolver_match.url_name == 'audit_log_list' %}active{% endif %}">
+        <i class="bi bi-journal-text"></i> Audit Logs
+    </a>
+</div>

@@ -1,0 +1,101 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Warehouse Requests - Platform{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    {% include "warehouse/includes/warehouse_nav.html" %}
+
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1>Warehouse Requests</h1>
+            <p>Review and process item requests.</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'warehouse:request_create' %}" class="btn btn-primary-modern"><i class="bi bi-send-check me-2"></i> New Request</a>
+            <a href="{% url 'warehouse:dashboard' %}" class="btn btn-outline-modern"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a>
+        </div>
+    </div>
+
+    <div class="card-modern mb-3">
+        <div class="card-body-modern">
+            <form method="get" class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        {% for value,label in status_choices %}
+                        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary-modern"><i class="bi bi-search me-2"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="card-body-modern">
+            {% if requests %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead><tr><th>ID</th><th>Items</th><th>Requester</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    {% for warehouse_request in requests %}
+                    <tr>
+                        <td>#{{ warehouse_request.id }}</td>
+                        <td>
+                            {% for request_item in warehouse_request.items.all %}
+                            <div><strong>{{ request_item.item.name }}</strong><br><small>{{ request_item.item.code }} - Req: {{ request_item.quantity_requested }} / Appr: {{ request_item.quantity_approved }}</small></div>
+                            {% empty %}
+                            <span class="text-muted">No items</span>
+                            {% endfor %}
+                        </td>
+                        <td>{{ warehouse_request.requester.get_full_name|default:warehouse_request.requester.username }}</td>
+                        <td><span class="badge bg-light text-dark">{{ warehouse_request.get_status_display }}</span></td>
+                        <td>{{ warehouse_request.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            {% if warehouse_request.status == "pending" and request.user.is_staff %}
+                            <div class="d-flex gap-2">
+                                <form method="post" action="{% url 'warehouse:approve_request' warehouse_request.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                </form>
+                                <form method="post" action="{% url 'warehouse:reject_request' warehouse_request.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="bi bi-clipboard-check"></i><h5>No requests found</h5></div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+        <div class="btn-group">
+            {% if page_obj.has_previous %}
+            <a class="btn btn-sm btn-outline-modern" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"><i class="bi bi-chevron-left"></i> Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn btn-sm btn-primary-modern" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next <i class="bi bi-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

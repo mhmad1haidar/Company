@@ -22,6 +22,13 @@
                 <i class="bi bi-person-plus me-2"></i>
                 Assign Work
             </a>
+            <button class="btn btn-primary-modern directions-btn" 
+                    data-intervention-pk="{{ intervention.pk }}" 
+                    data-international-code="{{ intervention.international_code|default:"" }}"
+                    data-codice-sito="{{ intervention.codice_sito|default:"" }}">
+                <i class="bi bi-directions me-2"></i>
+                Directions
+            </button>
             {% if perms.interventions.delete_intervention %}
             <a href="{% url 'interventions:intervention-delete' intervention.pk %}" class="btn btn-outline-modern text-danger">
                 <i class="bi bi-trash me-2"></i>
@@ -436,4 +443,46 @@
         </div>
     </div>
 </div>
+
+<script>
+// Directions button handler
+document.addEventListener('DOMContentLoaded', function() {
+    const directionsBtn = document.querySelector('.directions-btn');
+    if (directionsBtn) {
+        directionsBtn.addEventListener('click', function() {
+            const internationalCode = this.getAttribute('data-international-code');
+            const codiceSito = this.getAttribute('data-codice-sito');
+            const interventionPk = this.getAttribute('data-intervention-pk');
+            
+            console.log('Getting directions for intervention:', { interventionPk, internationalCode, codiceSito });
+            
+            // Call backend to get directions URL
+            const url = `/interventions/intervention/${interventionPk}/get-directions/`;
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Response from server:', data);
+                if (data.success && data.directions_url) {
+                    // Open Google Maps directly
+                    window.open(data.directions_url, '_blank');
+                } else {
+                    console.log('Debug info:', data.debug || 'No debug info available');
+                    alert(data.error || 'No location information available for this intervention.');
+                }
+            })
+            .catch(error => {
+                console.error('Error getting directions:', error);
+                alert('An error occurred while getting directions.');
+            });
+        });
+    }
+});
+</script>
+
 {% endblock %}

@@ -439,3 +439,87 @@ def delete_assignment(request, pk):
     except Exception as e:
         messages.error(request, f'Error deleting assignment: {str(e)}')
         return redirect('assignments:assignment-list')
+
+
+@login_required
+def get_directions(request, pk):
+    """Get directions URL for assignment"""
+    assignment = get_object_or_404(WorkAssignment, pk=pk)
+    
+    # Check if user can view this assignment
+    if request.user not in assignment.assigned_to.all() and not request.user.has_perm('assignments.view_assignment'):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    debug_info = []
+    
+    # Only match International Code with site_code in TelecomSite
+    if assignment.intervention:
+        from interventions.models import TelecomSite
+        
+        # Try international_code first (strip whitespace)
+        international_code = assignment.intervention.international_code
+        if international_code:
+            international_code = international_code.strip()
+            debug_info.append(f"Looking for international_code: '{international_code}'")
+            
+            site = TelecomSite.objects.filter(
+                site_code__iexact=international_code
+            ).first()
+            
+            if site:
+                debug_info.append(f"Found site: {site.site_name} (code: {site.site_code})")
+                if site.latitude and site.longitude:
+                    directions_url = f"https://www.google.com/maps/dir/?api=1&destination={site.latitude},{site.longitude}"
+                    return JsonResponse({
+                        'success': True,
+                        'directions_url': directions_url
+                    })
+                else:
+                    debug_info.append(f"Site found but NO coordinates: lat={site.latitude}, lng={site.longitude}")
+            else:
+                debug_info.append(f"No site found with code: '{international_code}'")
+                # Show available sites for reference
+                similar_sites = TelecomSite.objects.filter(site_code__icontains=international_code[:3])[:5]
+                if similar_sites:
+                    debug_info.append(f"Similar sites: {[s.site_code for s in similar_sites]}")
+        else:
+            debug_info.append("No international_code in intervention")
+        
+        # Try codice_sito as fallback (strip whitespace)
+        codice_sito = assignment.intervention.codice_sito
+        if codice_sito:
+            codice_sito = codice_sito.strip()
+            debug_info.append(f"Trying codice_sito: '{codice_sito}'")
+            
+            site = TelecomSite.objects.filter(
+                site_code__iexact=codice_sito
+            ).first()
+            
+            if site and site.latitude and site.longitude:
+                directions_url = f"https://www.google.com/maps/dir/?api=1&destination={site.latitude},{site.longitude}"
+                return JsonResponse({
+                    'success': True,
+                    'directions_url': directions_url
+                })
+            elif site:
+                debug_info.append(f"Site found via codice_sito but NO coordinates")
+            else:
+                debug_info.append(f"No site found with codice_sito: '{codice_sito}'")
+    else:
+        debug_info.append("No intervention linked to assignment")
+    
+    # If assignment has manual site data, use it as fallback
+    if assignment.site_address or (assignment.site_latitude and assignment.site_longitude):
+        directions_url = assignment.get_directions_url()
+        return JsonResponse({
+            'success': True,
+            'directions_url': directions_url,
+            'debug': debug_info
+        })
+    
+    # No location data available
+    return JsonResponse({
+        'success': False,
+        'error': 'No location information available',
+        'debug': debug_info
+    })

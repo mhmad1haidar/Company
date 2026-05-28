@@ -2,3 +2,10 @@
 db.sqlite3
 __pycache__/
 *.pyc
+.venv/
+.venv-check/
+*.log
+*.pid
+media/
+company/gcs_credentials.json
+company/google_drive_credentials.json
