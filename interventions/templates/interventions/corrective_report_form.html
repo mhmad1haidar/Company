@@ -27,26 +27,34 @@
 
         <div class="card-modern mb-3">
             <div class="card-header-modern">
-                <h5 class="card-title-modern mb-0"><i class="bi bi-clipboard-check me-2"></i> Work Summary</h5>
+                <h5 class="card-title-modern mb-0"><i class="bi bi-clipboard-check me-2"></i> Report Information</h5>
             </div>
             <div class="card-body-modern">
                 <div class="row">
                     {% if form.codice_nigit_lookup %}
                     <div class="col-12 mb-3">
                         <label class="form-label" for="{{ form.codice_nigit_lookup.id_for_label }}">{{ form.codice_nigit_lookup.label }}</label>
-                        <div class="input-group">
-                            {{ form.codice_nigit_lookup }}
-                            <button class="btn btn-outline-modern" type="button" id="lookupCorrectiveCode">
-                                <i class="bi bi-search me-1"></i> Fill
+                        <div class="corrective-lookup-panel">
+                            <div class="corrective-lookup-input">
+                                <i class="bi bi-upc-scan"></i>
+                                {{ form.codice_nigit_lookup }}
+                            </div>
+                            <button class="btn btn-primary-modern" type="button" id="lookupCorrectiveCode">
+                                <i class="bi bi-magic me-1"></i> Auto Fill
                             </button>
                         </div>
+                        <datalist id="codiceNigitOptions">
+                            {% for code in codice_nigit_options %}
+                            <option value="{{ code }}"></option>
+                            {% endfor %}
+                        </datalist>
                         <div id="correctiveLookupStatus" class="form-text"></div>
                         {% for error in form.codice_nigit_lookup.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                     </div>
                     {% endif %}
                     {% for field in form.visible_fields %}
-                        {% if field.name == "performed_at" or field.name == "fault_found" or field.name == "action_taken" or field.name == "work_summary" or field.name == "customer_notes" or field.name == "internal_notes" %}
-                        <div class="{% if field.name == 'performed_at' %}col-md-4{% else %}col-12{% endif %} mb-3">
+                        {% if field.name == "performed_at" %}
+                        <div class="col-md-4 mb-3">
                             <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                             {{ field }}
                             {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
@@ -58,12 +66,15 @@
         </div>
 
         <div class="card-modern">
-            <div class="card-header-modern d-flex align-items-center justify-content-between">
-                <h5 class="card-title-modern mb-0"><i class="bi bi-list-ul me-2"></i> Corrective Report Questions</h5>
+            <div class="card-header-modern corrective-form-heading">
+                <div>
+                    <h5 class="card-title-modern mb-0"><i class="bi bi-list-ul me-2"></i> Corrective Report Questions</h5>
+                    <small>Organized by customer, work, team, and materials.</small>
+                </div>
                 <span class="badge bg-primary">{{ question_bound_fields|length }} fields</span>
             </div>
             <div class="card-body-modern">
-                <div class="corrective-question-grid">
+                <div class="corrective-section-grid">
                     {% for label, field in question_bound_fields %}
                     <div class="corrective-question {% if 'Materiale' in label or 'Quantità' in label %}is-material{% endif %}">
                         <label class="form-label" for="{{ field.id_for_label }}">{{ label }}</label>
@@ -73,7 +84,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="page-actions mt-4">
+                <div class="page-actions corrective-submit-bar mt-4">
                     <button type="submit" class="btn btn-primary-modern">
                         <i class="bi bi-send-check me-2"></i> Submit Corrective Report
                     </button>
@@ -90,9 +101,218 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const reportForm = document.querySelector('.corrective-report-page form');
     const input = document.querySelector('.corrective-code-lookup');
     const button = document.getElementById('lookupCorrectiveCode');
     const status = document.getElementById('correctiveLookupStatus');
+
+    if (reportForm) {
+        reportForm.addEventListener('keydown', event => {
+            const tagName = event.target.tagName.toLowerCase();
+            const isSubmitButton = event.target.matches('button[type="submit"]');
+            if (event.key === 'Enter' && tagName !== 'textarea' && !isSubmitButton) {
+                event.preventDefault();
+            }
+        });
+    }
+
+    function organizeCorrectiveSections() {
+        const grid = document.querySelector('.corrective-section-grid');
+        if (!grid || grid.dataset.organized === '1') return;
+        grid.dataset.organized = '1';
+
+        const sections = [
+            {
+                key: 'site',
+                icon: 'bi-building',
+                title: 'Customer & Site',
+                text: 'Client, site, and contact information.',
+                match: label => ['Indirizzo email', 'Cliente', 'REGIONE', 'Nome assistente e recapito telefonico', 'Nome ordinante', 'Cod. sito', 'NOME SITO BTS', 'Indirizzio'].includes(label)
+            },
+            {
+                key: 'work',
+                icon: 'bi-tools',
+                title: 'Intervention Details',
+                text: 'Request, timing, result, and technical notes.',
+                match: label => ['Tipo manutenzione', 'Tipo Manutenzione Altro', 'Cod. intervento / Num. scheda gig', 'Data richiesta intervento', 'Richiesta Cliente', 'Descrizione intervento', 'Data esecuzione lavori', 'Intervento risolutivo?', 'Richiesta sospensione', 'Descrivere la causa della sospensione', 'Data', 'Inizio lavori', 'Fine lavori', 'Cod_Nigit', 'Cod. internazionale', 'Confirmation', 'SENT'].includes(label)
+            },
+            {
+                key: 'team',
+                icon: 'bi-people',
+                title: 'Team & Vehicles',
+                text: 'Personnel present, support team, and company vehicles.',
+                match: label => ['Personale presente', 'Veicolo Aziendale', 'Presente squadra di supporto?', 'Personale presente supporto', 'Veicolo Aziendale supporto', 'Personale presente supporto 2'].includes(label)
+            },
+            {
+                key: 'materials',
+                icon: 'bi-box-seam',
+                title: 'Materials',
+                text: 'Warehouse items, quantities, and additional material notes.',
+                match: label => label.includes('Materiale') || label.includes('Quantit')
+            }
+        ];
+
+        const container = document.createElement('div');
+        container.className = 'corrective-sections';
+        const sectionGrids = {};
+        sections.forEach(section => {
+            const block = document.createElement('section');
+            block.className = `corrective-section corrective-section-${section.key}`;
+            block.innerHTML = `
+                <div class="corrective-section-header">
+                    <span><i class="bi ${section.icon}"></i></span>
+                    <div>
+                        <h6>${section.title}</h6>
+                        <small>${section.text}</small>
+                    </div>
+                </div>
+                <div class="corrective-section-grid-inner"></div>
+            `;
+            sectionGrids[section.key] = block.querySelector('.corrective-section-grid-inner');
+            container.appendChild(block);
+        });
+
+        Array.from(grid.querySelectorAll('.corrective-question')).forEach(question => {
+            const label = question.querySelector('label')?.textContent.trim() || '';
+            const section = sections.find(item => item.match(label)) || sections[1];
+            if (label.includes('Materiale') || label.includes('Quantit')) question.classList.add('is-material');
+            if (['Descrizione intervento', 'Descrivere la causa della sospensione', 'Elenco Materiale necessarie per completare il lavoro :'].includes(label)) {
+                question.classList.add('is-wide');
+            }
+            sectionGrids[section.key].appendChild(question);
+        });
+        grid.replaceWith(container);
+    }
+
+    function enhanceSelect(select, placeholder, isEmployee) {
+        if (!select || select.dataset.searchReady === '1') return;
+        select.dataset.searchReady = '1';
+        select.classList.add('corrective-native-select-hidden');
+
+        const combo = document.createElement('div');
+        combo.className = `corrective-combo ${select.multiple ? 'is-multiple' : 'is-single'}`;
+        const control = document.createElement('div');
+        control.className = 'corrective-combo-control';
+        const icon = document.createElement('i');
+        icon.className = isEmployee ? 'bi bi-people' : 'bi bi-search';
+        const inputField = document.createElement('input');
+        inputField.type = 'search';
+        inputField.className = 'corrective-combo-input';
+        inputField.placeholder = placeholder;
+        inputField.autocomplete = 'off';
+        const count = document.createElement('span');
+        count.className = 'corrective-combo-count';
+        const dropdown = document.createElement('div');
+        dropdown.className = 'corrective-combo-menu';
+
+        control.appendChild(icon);
+        control.appendChild(inputField);
+        control.appendChild(count);
+        combo.appendChild(control);
+        combo.appendChild(dropdown);
+        select.insertAdjacentElement('afterend', combo);
+        combo.addEventListener('click', event => event.stopPropagation());
+
+        const choices = Array.from(select.options).filter(option => option.value);
+
+        function selectedChoices() {
+            return choices.filter(option => option.selected);
+        }
+
+        function updateControl() {
+            const selected = selectedChoices();
+            if (select.multiple) {
+                count.textContent = selected.length ? `${selected.length} selected` : '';
+                inputField.placeholder = selected.length ? 'Search or add more' : placeholder;
+            } else {
+                inputField.value = selected[0] ? selected[0].textContent.trim() : '';
+                count.textContent = '';
+            }
+        }
+
+        function renderChoices() {
+            const query = inputField.value.trim().toLowerCase();
+            dropdown.innerHTML = '';
+            const matches = choices.filter(option => option.textContent.toLowerCase().includes(query));
+
+            if (!matches.length) {
+                const empty = document.createElement('div');
+                empty.className = 'corrective-combo-empty';
+                empty.textContent = 'No result found';
+                dropdown.appendChild(empty);
+                return;
+            }
+
+            matches.forEach(option => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'corrective-combo-option';
+                item.dataset.value = option.value;
+                if (option.selected) item.classList.add('is-selected');
+
+                if (select.multiple) {
+                    const check = document.createElement('span');
+                    check.className = 'corrective-combo-check';
+                    check.innerHTML = option.selected ? '<i class="bi bi-check2"></i>' : '';
+                    item.appendChild(check);
+                }
+
+                const text = document.createElement('span');
+                text.textContent = option.textContent.trim();
+                item.appendChild(text);
+                item.addEventListener('click', () => {
+                    if (select.multiple) {
+                        option.selected = !option.selected;
+                        inputField.value = '';
+                    } else {
+                        choices.forEach(choice => { choice.selected = false; });
+                        option.selected = true;
+                        combo.classList.remove('is-open');
+                    }
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    updateControl();
+                    renderChoices();
+                    inputField.focus();
+                });
+                dropdown.appendChild(item);
+            });
+        }
+
+        function openCombo() {
+            document.querySelectorAll('.corrective-combo.is-open').forEach(open => {
+                if (open !== combo) open.classList.remove('is-open');
+            });
+            combo.classList.add('is-open');
+            renderChoices();
+        }
+
+        control.addEventListener('click', () => {
+            inputField.focus();
+            openCombo();
+        });
+        inputField.addEventListener('focus', openCombo);
+        inputField.addEventListener('input', () => {
+            combo.classList.add('is-open');
+            renderChoices();
+        });
+        select.addEventListener('change', updateControl);
+        updateControl();
+        renderChoices();
+    }
+
+    document.querySelectorAll('.searchable-material-select').forEach(select => {
+        enhanceSelect(select, 'Search material code or name', false);
+    });
+    document.querySelectorAll('.searchable-employee-select').forEach(select => {
+        enhanceSelect(select, 'Search employee', true);
+    });
+    organizeCorrectiveSections();
+    document.addEventListener('click', event => {
+        if (!event.target.closest('.corrective-combo')) {
+            document.querySelectorAll('.corrective-combo.is-open').forEach(combo => combo.classList.remove('is-open'));
+        }
+    });
+
     if (!input || !button) return;
 
     function setReportField(label, value) {

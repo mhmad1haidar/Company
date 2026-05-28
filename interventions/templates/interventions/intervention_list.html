@@ -167,18 +167,21 @@
         <div class="card-body-modern">
             {% if interventions %}
             <div class="table-responsive">
-                <table class="table table-modern">
+                <table class="table table-modern interventions-ops-table">
                     <thead>
                         <tr>
                             <th width="40">
                                 <input type="checkbox" id="selectAll" class="form-check-input">
                             </th>
                             <th>Codice NIGIT</th>
+                            <th>ODA</th>
+                            <th>International Code</th>
+                            <th>Codice Sito</th>
+                            <th>Tipologia Intervento</th>
                             <th>Cliente</th>
-                            <th>Nome</th>
-                            <th>Stato</th>
-                            <th>Data Richiesta</th>
-                            <th>Tot Richiesto</th>
+                            <th>Intervento</th>
+                            <th>Nome Assistente</th>
+                            <th>Anno</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -191,33 +194,20 @@
                             <td>
                                 <strong>{{ intervention.codice_nigit|default:"-" }}</strong>
                             </td>
-                            <td>{{ intervention.cliente|default:"-" }}</td>
+                            <td>{{ intervention.oda|default:"-" }}</td>
+                            <td>{{ intervention.international_code|default:"-" }}</td>
+                            <td>{{ intervention.codice_sito|default:"-" }}</td>
+                            <td>{{ intervention.tipologia_intervento|default:"-" }}</td>
+                            <td>
+                                {{ intervention.cliente|default:"-" }}</td>
                             <td>{{ intervention.nome|default:"-" }}</td>
-                            <td>
-                                {% if intervention.stato_avanzamento_nigit %}
-                                    {% with status_colors="DA_INIZIARE:warning,IN_CORSO:info,COMPLETATO:success,SOSPESO:secondary,ANNULLATO:danger" %}
-                                        {% for status_color in status_colors.split %}
-                                            {% with status_pair=status_color.split %}
-                                                {% if intervention.stato_avanzamento_nigit == status_pair.0 %}
-                                                    <span class="badge bg-{{ status_pair.1 }}">
-                                                        {{ intervention.get_stato_avanzamento_nigit_display }}
-                                                    </span>
-                                                {% endif %}
-                                            {% endwith %}
-                                        {% endfor %}
-                                    {% endwith %}
-                                {% else %}
-                                    <span class="badge bg-secondary">Non impostato</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ intervention.data_richiesta|default:"-" }}</td>
-                            <td>
-                                {% if intervention.tot_richiesto %}
+                            <td>{{ intervention.assistente|default:"-" }}</td>
+                            <td>{{ intervention.anno_intervento|default:"-" }}</td>
+                            {% comment %}
                                     €{{ intervention.tot_richiesto|floatformat:2 }}
                                 {% else %}
                                     -
-                                {% endif %}
-                            </td>
+                            {% endcomment %}
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'interventions:intervention-detail' intervention.pk %}" 

@@ -1,6 +1,9 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 import unicodedata
+from accounts.models import User
+from fleet.models import Car
+from warehouse.models import Item
 from .models import CorrectiveReport, Intervention
 
 
@@ -70,23 +73,14 @@ class CorrectiveReportForm(forms.ModelForm):
         model = CorrectiveReport
         fields = [
             "performed_at",
-            "fault_found",
-            "action_taken",
-            "work_summary",
-            "customer_notes",
-            "internal_notes",
         ]
         widgets = {
             "performed_at": forms.DateTimeInput(attrs={"type": "datetime-local", "class": "form-control"}),
-            "fault_found": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
-            "action_taken": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
-            "work_summary": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
-            "customer_notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
-            "internal_notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
         }
 
-    def __init__(self, *args, intervention=None, **kwargs):
+    def __init__(self, *args, intervention=None, user=None, **kwargs):
         self.intervention = intervention or getattr(kwargs.get("instance"), "intervention", None)
+        self.user = user
         super().__init__(*args, **kwargs)
 
         if not self.intervention:
@@ -97,6 +91,7 @@ class CorrectiveReportForm(forms.ModelForm):
                     "class": "form-control corrective-code-lookup",
                     "placeholder": "Enter Codice NIGIT",
                     "autocomplete": "off",
+                    "list": "codiceNigitOptions",
                 }),
             )
 
@@ -120,11 +115,39 @@ class CorrectiveReportForm(forms.ModelForm):
     def _build_question_field(self, label):
         attrs = {"class": "form-control", "placeholder": label}
         lower = label.lower()
+        if label == "Indirizzo email":
+            choices = [("", "---------")]
+            choices.extend(
+                (user.email, f"{user.get_full_name() or user.username} - {user.email}")
+                for user in User.objects.filter(is_active=True).exclude(email="").order_by("first_name", "last_name", "username")
+            )
+            return forms.ChoiceField(label=label, required=False, choices=choices, widget=forms.Select(attrs={"class": "form-select"}))
+        if label in ["Personale presente", "Personale presente supporto", "Personale presente supporto 2"]:
+            return forms.ModelMultipleChoiceField(
+                label=label,
+                required=False,
+                queryset=User.objects.filter(is_active=True, role=User.Role.EMPLOYEE).order_by("first_name", "last_name", "username"),
+                widget=forms.SelectMultiple(attrs={"class": "form-select searchable-employee-select", "size": 5}),
+            )
+        if label in ["Veicolo Aziendale", "Veicolo Aziendale supporto"]:
+            return forms.ModelChoiceField(
+                label=label,
+                required=False,
+                queryset=Car.objects.all().order_by("plate_number"),
+                widget=forms.Select(attrs={"class": "form-select"}),
+            )
+        if label.startswith("Materiale utilizzato "):
+            return forms.ModelChoiceField(
+                label=label,
+                required=False,
+                queryset=Item.objects.filter(status="active").order_by("code", "name"),
+                widget=forms.Select(attrs={"class": "form-select searchable-material-select"}),
+            )
         if "data" in lower:
             return forms.DateField(label=label, required=False, widget=forms.DateInput(attrs={**attrs, "type": "date"}))
         if "inizio lavori" in lower or "fine lavori" in lower:
             return forms.TimeField(label=label, required=False, widget=forms.TimeInput(attrs={**attrs, "type": "time"}))
-        if "quantità" in lower:
+        if "quantit" in lower:
             return forms.IntegerField(label=label, required=False, min_value=0, widget=forms.NumberInput(attrs=attrs))
         if "risolutivo" in lower or "sospensione" in lower or "supporto?" in lower or label == "Confirmation":
             return forms.ChoiceField(
@@ -141,8 +164,11 @@ class CorrectiveReportForm(forms.ModelForm):
     def _intervention_defaults(self):
         intervention = self.intervention
         if not intervention:
-            return {}
+            return {
+                "Indirizzo email": self.user.email if self.user and self.user.email else "",
+            }
         return {
+            "Indirizzo email": self.user.email if self.user and self.user.email else "",
             "Cliente": intervention.cliente or "",
             "Nome assistente e recapito telefonico": intervention.assistente or "",
             "Cod. sito": intervention.codice_sito or "",
@@ -150,7 +176,7 @@ class CorrectiveReportForm(forms.ModelForm):
             "Tipo manutenzione": intervention.tipologia_intervento or "",
             "Cod. intervento / Num. scheda gig": intervention.ticket or "",
             "Data richiesta intervento": intervention.data_richiesta,
-            "Veicolo Aziendale": str(intervention.used_car) if intervention.used_car else "",
+            "Veicolo Aziendale": intervention.used_car.pk if intervention.used_car else "",
             "Richiesta Cliente": intervention.note or "",
             "Cod_Nigit": intervention.codice_nigit or "",
             "Cod. internazionale": intervention.international_code or "",
@@ -163,6 +189,12 @@ class CorrectiveReportForm(forms.ModelForm):
             value = self.cleaned_data.get(key)
             if value in [None, ""]:
                 continue
+            if hasattr(value, "model") and hasattr(value, "__iter__"):
+                if not value.exists():
+                    continue
+                value = [str(item) for item in value]
+            elif isinstance(value, (User, Car, Item)):
+                value = str(value)
             if hasattr(value, "isoformat"):
                 value = value.isoformat()
             answers[label] = value

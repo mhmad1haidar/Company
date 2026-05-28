@@ -13,6 +13,10 @@ from django.views.generic.edit import FormView
 from accounts.models import User, Notification
 
 from .forms import LeaveApprovalForm, LeaveFilterForm, LeaveRequestForm
+from .email_utils import (
+    send_leave_decision_email,
+    send_leave_request_submitted_email,
+)
 from .models import Leave, LeaveType
 
 
@@ -44,6 +48,7 @@ class LeaveRequestView(LoginRequiredMixin, CreateView):
                 message=f"{self.request.user.get_full_name() or self.request.user.get_username()} has requested {leave.leave_type.name} from {leave.start_date} to {leave.end_date}.",
                 link=f"/leave/admin/{leave.pk}/"
             )
+        send_leave_request_submitted_email(leave)
         
         messages.success(
             self.request,
@@ -215,6 +220,7 @@ class LeaveApprovalView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     def form_valid(self, form):
         leave = form.save()
         status = "approved" if leave.status == Leave.Status.APPROVED else "rejected"
+        send_leave_decision_email(leave)
         
         # Check if this is an AJAX request
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest' or self.request.content_type == 'application/x-www-form-urlencoded':
@@ -264,6 +270,7 @@ class LeaveRejectionView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         # Force status to rejected
         form.instance.status = Leave.Status.REJECTED
         leave = form.save()
+        send_leave_decision_email(leave)
         
         # Check if this is an AJAX request
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest' or self.request.content_type == 'application/x-www-form-urlencoded':
@@ -418,6 +425,7 @@ class LeaveApproveActionView(LoginRequiredMixin, UserPassesTestMixin, View):
             message=f"Your {leave.leave_type.name} leave from {leave.start_date} to {leave.end_date} has been approved.",
             link="/leave/"
         )
+        send_leave_decision_email(leave)
         
         # Check if this is an AJAX request
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -459,6 +467,7 @@ class LeaveRejectActionView(LoginRequiredMixin, UserPassesTestMixin, View):
             message=f"Your {leave.leave_type.name} leave from {leave.start_date} to {leave.end_date} has been rejected.",
             link="/leave/"
         )
+        send_leave_decision_email(leave)
         
         # Check if this is an AJAX request
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

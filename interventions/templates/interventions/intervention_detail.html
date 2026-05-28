@@ -428,9 +428,14 @@
                 <i class="bi bi-clipboard-check me-2"></i>
                 Corrective Reports
             </h5>
-            <a href="{% url 'interventions:corrective-report-create' intervention.pk %}" class="btn btn-sm btn-primary-modern">
-                <i class="bi bi-plus-circle me-1"></i> New Report
-            </a>
+            <div class="page-actions">
+                <a href="{% url 'interventions:corrective-report-list' %}?codice_nigit={{ intervention.codice_nigit }}" class="btn btn-sm btn-outline-modern">
+                    <i class="bi bi-list-ul me-1"></i> View All
+                </a>
+                <a href="{% url 'interventions:corrective-report-create' intervention.pk %}" class="btn btn-sm btn-primary-modern">
+                    <i class="bi bi-plus-circle me-1"></i> New Report
+                </a>
+            </div>
         </div>
         <div class="card-body-modern">
             {% if corrective_reports %}

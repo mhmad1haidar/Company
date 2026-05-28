@@ -509,9 +509,20 @@ def corrective_report_list(request):
     ).order_by('-created_at')
     
     # Filter by codice_nigit if provided
-    codice_nigit = request.GET.get('codice_nigit')
+    codice_nigit = request.GET.get('codice_nigit', '').strip()
     if codice_nigit:
         reports = reports.filter(intervention__codice_nigit__icontains=codice_nigit)
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        reports = reports.filter(
+            Q(intervention__cliente__icontains=search) |
+            Q(intervention__nome__icontains=search) |
+            Q(intervention__codice_sito__icontains=search) |
+            Q(reporter__username__icontains=search) |
+            Q(reporter__first_name__icontains=search) |
+            Q(reporter__last_name__icontains=search)
+        )
     
     # Filter by status if provided
     status = request.GET.get('status')
@@ -527,6 +538,7 @@ def corrective_report_list(request):
         'page_obj': page_obj,
         'is_paginated': paginator.num_pages > 1,
         'codice_nigit': codice_nigit,
+        'search': search,
         'status': status,
         'status_choices': CorrectiveReport.Status.choices
     })

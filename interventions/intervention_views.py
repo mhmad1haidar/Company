@@ -22,6 +22,7 @@ except ImportError:
 
 from .models import CorrectiveReport, Intervention
 from .forms import CorrectiveReportForm, InterventionForm, InterventionSearchForm, InterventionImportForm
+from .email_utils import send_corrective_report_submitted_email
 from accounts.models import Notification
 
 User = get_user_model()
@@ -129,6 +130,7 @@ class CorrectiveReportCreateView(LoginRequiredMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['intervention'] = self.intervention
+        kwargs['user'] = self.request.user
         return kwargs
 
     def form_valid(self, form):
@@ -138,12 +140,18 @@ class CorrectiveReportCreateView(LoginRequiredMixin, CreateView):
         report.status = CorrectiveReport.Status.SUBMITTED
         report.submitted_at = timezone.now()
         report.save()
+        send_corrective_report_submitted_email(report.pk)
         messages.success(self.request, 'Corrective report submitted successfully.')
         return redirect('interventions:corrective-report-detail', pk=report.pk)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['intervention'] = self.intervention
+        context['codice_nigit_options'] = Intervention.objects.exclude(
+            codice_nigit__isnull=True
+        ).exclude(
+            codice_nigit=''
+        ).order_by('codice_nigit').values_list('codice_nigit', flat=True)
         context['question_bound_fields'] = [
             (label, context['form'][key])
             for label, key in CorrectiveReportForm.QUESTION_FIELDS
@@ -170,7 +178,7 @@ def corrective_report_lookup(request):
             'Tipo manutenzione': intervention.tipologia_intervento or '',
             'Cod. intervento / Num. scheda gig': intervention.ticket or '',
             'Data richiesta intervento': intervention.data_richiesta.isoformat() if intervention.data_richiesta else '',
-            'Veicolo Aziendale': str(intervention.used_car) if intervention.used_car else '',
+            'Veicolo Aziendale': intervention.used_car.pk if intervention.used_car else '',
             'Richiesta Cliente': intervention.note or '',
             'Cod_Nigit': intervention.codice_nigit or '',
             'Cod. internazionale': intervention.international_code or '',

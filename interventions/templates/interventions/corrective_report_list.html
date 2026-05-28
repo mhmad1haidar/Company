@@ -7,18 +7,30 @@
     <div class="page-header">
         <div class="page-title-section">
             <h1>All Corrective Reports</h1>
-            <p>View and manage all corrective intervention reports</p>
+            <p>View all reports. Multiple reports can be submitted for the same Codice NIGIT.</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'interventions:corrective-report-create-free' %}" class="btn btn-primary-modern">
+                <i class="bi bi-plus-circle me-2"></i> New Corrective Report
+            </a>
+            <a href="{% url 'interventions:intervention-list' %}" class="btn btn-outline-modern">
+                <i class="bi bi-list-check me-2"></i> Interventions
+            </a>
         </div>
     </div>
 
     <div class="card-modern mb-3">
         <div class="card-body-modern">
-            <form method="get" class="row">
-                <div class="col-md-4">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
                     <label class="form-label">Codice Nigit</label>
                     <input type="text" name="codice_nigit" class="form-control" value="{{ codice_nigit }}" placeholder="Search by codice nigit">
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label">Employee / Customer / Site</label>
+                    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="Search reports">
+                </div>
+                <div class="col-md-2">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
                         <option value="">All statuses</option>
@@ -28,12 +40,10 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary-modern"><i class="bi bi-search"></i> Filter</button>
+                    <button type="submit" class="btn btn-primary-modern w-100"><i class="bi bi-search"></i> Filter</button>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <a href="{% url 'interventions:corrective-report-list' %}" class="btn btn-outline-modern">Clear</a>
+                <div class="col-md-2">
+                    <a href="{% url 'interventions:corrective-report-list' %}" class="btn btn-outline-modern w-100">Clear</a>
                 </div>
             </form>
         </div>
@@ -41,12 +51,13 @@
 
     <div class="card-modern">
         <div class="card-body-modern">
-            {% if page_obj %}
+            {% if page_obj.object_list %}
             <div class="table-responsive">
                 <table class="table table-modern">
                     <thead>
                         <tr>
                             <th>Codice Nigit</th>
+                            <th>Customer / Site</th>
                             <th>Reporter</th>
                             <th>Status</th>
                             <th>Performed At</th>
@@ -58,6 +69,10 @@
                         {% for report in page_obj %}
                         <tr>
                             <td><strong>{{ report.intervention.codice_nigit }}</strong></td>
+                            <td>
+                                <div class="fw-semibold">{{ report.intervention.cliente|default:"-" }}</div>
+                                <small class="text-muted">{{ report.intervention.codice_sito|default:"-" }}{% if report.intervention.nome %} - {{ report.intervention.nome|truncatechars:40 }}{% endif %}</small>
+                            </td>
                             <td>{{ report.reporter.get_full_name|default:report.reporter.username }}</td>
                             <td><span class="badge bg-primary">{{ report.get_status_display }}</span></td>
                             <td>{{ report.performed_at|date:"d/m/Y H:i"|default:"-" }}</td>
@@ -90,12 +105,12 @@
         <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
         <div class="btn-group">
             {% if page_obj.has_previous %}
-            <a class="btn btn-sm btn-outline-modern" href="?page={{ page_obj.previous_page_number }}&codice_nigit={{ codice_nigit }}&status={{ status }}">
+            <a class="btn btn-sm btn-outline-modern" href="?page={{ page_obj.previous_page_number }}&codice_nigit={{ codice_nigit }}&search={{ search }}&status={{ status }}">
                 <i class="bi bi-chevron-left"></i> Previous
             </a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a class="btn btn-sm btn-primary-modern" href="?page={{ page_obj.next_page_number }}&codice_nigit={{ codice_nigit }}&status={{ status }}">
+            <a class="btn btn-sm btn-primary-modern" href="?page={{ page_obj.next_page_number }}&codice_nigit={{ codice_nigit }}&search={{ search }}&status={{ status }}">
                 Next <i class="bi bi-chevron-right"></i>
             </a>
             {% endif %}
