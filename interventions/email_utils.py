@@ -4,12 +4,12 @@ from html import escape
 from io import BytesIO
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.db import close_old_connections
 from django.db.models import Q
 from django.urls import reverse
 
 from accounts.models import User
+from company.email_delivery import send_email
 from .models import CorrectiveReport
 
 
@@ -157,23 +157,23 @@ def send_corrective_report_submitted_email(report_id):
             report = CorrectiveReport.objects.select_related("intervention", "reporter").get(pk=report_id)
             code = report.intervention.codice_nigit or report.pk
             subject = f"Corrective report submitted - {code}"
-            message = EmailMultiAlternatives(
-                subject=subject,
-                body=_build_text(report),
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com"),
-                to=recipients,
+            send_email(
+                subject,
+                _build_text(report),
+                recipients,
+                html=_build_html(report),
+                attachments=[
+                    {
+                        "filename": f"corrective-report-{code}.pdf",
+                        "content": _build_pdf(report),
+                        "content_type": "application/pdf",
+                    }
+                ],
             )
-            message.attach_alternative(_build_html(report), "text/html")
-            message.attach(
-                f"corrective-report-{code}.pdf",
-                _build_pdf(report),
-                "application/pdf",
-            )
-            message.send(fail_silently=False)
         except Exception:
             logger.exception("Could not send corrective report email for report %s", report_id)
         finally:
             close_old_connections()
 
-    threading.Thread(target=send_in_background, daemon=True).start()
+    threading.Thread(target=send_in_background).start()
     return len(recipients)

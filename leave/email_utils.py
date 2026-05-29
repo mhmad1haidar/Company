@@ -2,11 +2,11 @@ import logging
 import threading
 
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models import Q
 from django.urls import reverse
 
 from accounts.models import User
+from company.email_delivery import send_email
 from .models import Leave
 
 
@@ -39,17 +39,15 @@ def _send(subject, message, recipients):
 
     def send_in_background():
         try:
-            send_mail(
+            send_email(
                 subject,
                 message,
-                getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com"),
                 recipients,
-                fail_silently=False,
             )
         except Exception:
             logger.exception("Could not send leave email to %s", ", ".join(recipients))
 
-    threading.Thread(target=send_in_background, daemon=True).start()
+    threading.Thread(target=send_in_background).start()
     return len(recipients)
 
 
@@ -58,12 +56,10 @@ def _send_sync(subject, message, recipients):
     if not recipients:
         return 0
     try:
-        return send_mail(
+        return send_email(
             subject,
             message,
-            getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com"),
             recipients,
-            fail_silently=False,
         )
     except Exception:
         logger.exception("Could not send leave email to %s", ", ".join(recipients))
