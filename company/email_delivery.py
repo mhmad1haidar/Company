@@ -48,6 +48,7 @@ def send_email(subject, text, recipients, html=None, attachments=None):
             headers={
                 "Authorization": f"Bearer {resend_api_key}",
                 "Content-Type": "application/json",
+                "User-Agent": "company-platform/1.0",
             },
             method="POST",
         )
