@@ -145,6 +145,7 @@ LOGIN_REDIRECT_URL = "accounts:dashboard"
 LOGOUT_REDIRECT_URL = "accounts:login"
 
 SITE_URL = env("SITE_URL", default="")
+BREVO_API_KEY = env("BREVO_API_KEY", default="")
 RESEND_API_KEY = env("RESEND_API_KEY", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Company Platform <noreply@example.com>")
 EMAIL_BACKEND = env(

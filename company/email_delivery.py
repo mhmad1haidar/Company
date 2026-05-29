@@ -35,10 +35,64 @@ def _resend_payload(subject, text, recipients, html=None, attachments=None):
     return payload
 
 
+def _sender_parts():
+    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "Company Platform <noreply@example.com>")
+    if "<" in sender and ">" in sender:
+        name = sender.split("<", 1)[0].strip() or "Company Platform"
+        email = sender.split("<", 1)[1].split(">", 1)[0].strip()
+        return {"name": name, "email": email}
+    return {"name": "Company Platform", "email": sender}
+
+
+def _brevo_payload(subject, text, recipients, html=None, attachments=None):
+    payload = {
+        "sender": _sender_parts(),
+        "to": [{"email": email} for email in recipients],
+        "subject": subject,
+        "textContent": text or "",
+    }
+    if html:
+        payload["htmlContent"] = html
+    if attachments:
+        payload["attachment"] = [
+            {
+                "name": item["filename"],
+                "content": base64.b64encode(item["content"]).decode("ascii"),
+            }
+            for item in attachments
+        ]
+    return payload
+
+
 def send_email(subject, text, recipients, html=None, attachments=None):
     recipients = _clean_recipients(recipients)
     if not recipients:
         return 0
+
+    brevo_api_key = getattr(settings, "BREVO_API_KEY", "")
+    if brevo_api_key:
+        request = Request(
+            "https://api.brevo.com/v3/smtp/email",
+            data=json.dumps(_brevo_payload(subject, text, recipients, html, attachments)).encode("utf-8"),
+            headers={
+                "api-key": brevo_api_key,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "company-platform/1.0",
+            },
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=getattr(settings, "EMAIL_TIMEOUT", 10)) as response:
+                response.read()
+            return len(recipients)
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            logger.exception("Brevo email failed with HTTP %s: %s", exc.code, detail)
+            return 0
+        except URLError:
+            logger.exception("Brevo email network error")
+            return 0
 
     resend_api_key = getattr(settings, "RESEND_API_KEY", "")
     if resend_api_key:
